@@ -1,0 +1,83 @@
+{
+  "_comment": "Codex hook config template. Copy to .codex/hooks.json for local use (hooks.json is gitignored).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".codex/hooks/no-emoji-check.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": ".codex/hooks/no-bak-slang-check.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONUTF8=1 code-review-graph update --skip-flows",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph status",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": ".codex/hooks/setup-check.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": ".codex/hooks/memory-health.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": ".codex/hooks/load-context.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/wiki-health.sh",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".codex/hooks/remind-korean-style.sh",
+            "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": ".codex/hooks/memory-selfcheck.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

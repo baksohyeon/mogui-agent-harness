@@ -1,0 +1,10 @@
+# Codex MCP config template.
+# Copy to .codex/config.toml for local use (config.toml is gitignored).
+# Remove this block if you do not use the code-review-graph MCP.
+
+[mcp_servers.code-review-graph]
+command = "uvx"
+args = [
+  "code-review-graph",
+  "serve",
+]

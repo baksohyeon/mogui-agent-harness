@@ -1,0 +1,26 @@
+---
+description: Always apply this repo's agentic operating rules before answering or editing.
+globs:
+alwaysApply: true
+---
+
+# Agentic Starter Cursor Router
+
+Before answering or editing in this repo, read:
+
+- `.agent/Instructions.md`: agent behavior rules
+- `.agent/Context.md`: product, team, stack, current decisions
+- `.agent/Memory.md`: user preferences, repeated corrections, operating memory
+
+Cursor does not run the Claude Code hook chain. Treat this rule and `AGENTS.md` as the Cursor entrypoint, then read the `.agent` files directly.
+
+Use code-review-graph MCP for code structure questions before broad text search. Use `docs/wiki/decisions/` and `docs/wiki/guides/` for decision rationale and operating rules.
+
+After agentic/wiki/router changes, run:
+
+```bash
+bash scripts/verify-agent-ssot.sh
+git diff --check
+```
+
+Important guide, ADR, or postmortem changes require a Review Gate Quiz with at most three questions. Long workflows require a snapshot under `docs/wiki/postmortem/temp/`.

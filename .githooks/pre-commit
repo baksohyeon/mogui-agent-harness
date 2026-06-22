@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# pre-commit: vault frontmatter automation
+#
+# 1) Auto-update the frontmatter `updated_at:` field of staged .md files in docs/ to today's date
+#    (schema v2 standard. See `docs/wiki/_schema/frontmatter.md`.)
+#    The single `updated:` from v1 is deprecated. v1-only files get a warning only (no block).
+# 2) Warn when a docs/ .md file has no frontmatter (does not block)
+#
+# Enable: run scripts/install-hooks.sh (or git config core.hooksPath .githooks)
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+TODAY=$(date +%Y-%m-%d)
+AUTHOR=$(git config user.name)
+BUMPED=()
+SUBSTITUTED=()
+WARNINGS=()
+
+# Resolve a working python interpreter.
+# Windows: `python3` can resolve on PATH to the MS Store stub (WindowsApps/python3),
+# which pops up a GUI installer and makes the hook fail. Fall back to the real python.
+PYTHON3="python3"
+if command -v python3 >/dev/null 2>&1; then
+  case "$(command -v python3)" in
+    */WindowsApps/python3*) PYTHON3="python" ;;
+  esac
+else
+  PYTHON3="python"
+fi
+
+# Staged .md in docs/ (added or modified)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^docs/.*\.md$' || true)
+
+[[ -z "$STAGED" ]] && exit 0
+
+while IFS= read -r file; do
+  [[ ! -f "$REPO_ROOT/$file" ]] && continue
+  full="$REPO_ROOT/$file"
+
+  # Has frontmatter?
+  if [[ "$(head -1 "$full")" != "---" ]]; then
+    WARNINGS+=("$file (no frontmatter)")
+    continue
+  fi
+
+  # Has `updated_at:` field within first 20 lines (frontmatter typically short)?
+  # schema v2 standard. The single `updated:` from v1 is deprecated: not checked or updated.
+  has_updated_at=0
+  if awk '/^---$/{n++} n==1 && /^updated_at:/{found=1; exit} END{exit !found}' "$full"; then
+    has_updated_at=1
+  else
+    WARNINGS+=("$file (frontmatter missing \`updated_at:\` field, schema v2)")
+  fi
+
+  # Handle both tasks in one pass:
+  #   (a) bump updated_at: to today's date (noop if already today)
+  #   (b) substitute the @git_author placeholder -> git user.name (frontmatter only)
+  # exit code: 0=noop, 1=bumped, 2=substituted, 3=both
+  py_code=0
+  "$PYTHON3" - "$full" "$TODAY" "$AUTHOR" "$has_updated_at" <<'PY' || py_code=$?
+import sys, re
+path, today, author, has_ua = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+m = re.match(r'^(---\n.*?\n---\n)', content, re.DOTALL)
+if not m:
+    sys.exit(0)
+fm = m.group(1)
+new_fm = fm
+
+# (a) updated_at bump: only when has_updated_at
+bumped = False
+if has_ua:
+    after = re.sub(r'(?m)^updated_at: .*$', f'updated_at: {today}', new_fm, count=1)
+    if after != new_fm:
+        new_fm = after
+        bumped = True
+
+# (b) @git_author substitution: frontmatter only, skip audit_log[].note lines
+# (note is free text, so @git_author may not be intended as a placeholder there.
+#  Example: a commit subject that itself contains the word @git_author and is preserved in note.)
+subbed = False
+if '@git_author' in new_fm:
+    lines = new_fm.split('\n')
+    in_audit_log = False
+    out_lines = []
+    for ln in lines:
+        # track entering/leaving audit_log
+        if re.match(r'^audit_log:\s*(\[\s*\]\s*)?$', ln):
+            in_audit_log = True
+        elif in_audit_log and re.match(r'^[a-zA-Z_]+:', ln):
+            in_audit_log = False
+        # skip note lines inside audit_log (no substitution)
+        is_note_line = in_audit_log and re.match(r'^\s+note:', ln)
+        if is_note_line:
+            out_lines.append(ln)
+        else:
+            out_lines.append(ln.replace('@git_author', author))
+    after = '\n'.join(out_lines)
+    if after != new_fm:
+        new_fm = after
+        subbed = True
+
+if new_fm != fm:
+    open(path, 'w', encoding='utf-8').write(new_fm + content[len(fm):])
+
+code = (1 if bumped else 0) | (2 if subbed else 0)
+sys.exit(code)
+PY
+  # py_code is captured from the `|| py_code=$?` on the heredoc above.
+  if (( py_code & 1 )); then
+    BUMPED+=("$file")
+  fi
+  if (( py_code & 2 )); then
+    SUBSTITUTED+=("$file")
+  fi
+  if (( py_code != 0 )); then
+    git add "$full"
+  fi
+done <<<"$STAGED"
+
+if [[ ${#BUMPED[@]} -gt 0 ]]; then
+  echo "[bumped] frontmatter \`updated_at:\` -> $TODAY:"
+  for f in "${BUMPED[@]}"; do echo "  - $f"; done
+fi
+
+if [[ ${#SUBSTITUTED[@]} -gt 0 ]]; then
+  echo "[substituted] frontmatter \`@git_author\` -> $AUTHOR:"
+  for f in "${SUBSTITUTED[@]}"; do echo "  - $f"; done
+fi
+
+if [[ ${#WARNINGS[@]} -gt 0 ]]; then
+  echo "[warn] frontmatter check recommended:"
+  for w in "${WARNINGS[@]}"; do echo "  - $w"; done
+  echo "   (not a block. See docs/wiki/_schema/frontmatter.md.)"
+fi
+
+# 3) Gitleaks: detect hardcoded secrets (block).
+#    Protection that originally lived in .git/hooks/pre-commit, merged here to avoid losing it on the core.hooksPath switch.
+if command -v gitleaks >/dev/null 2>&1 && [[ -z "${SKIP_GITLEAKS:-}" ]]; then
+  if ! gitleaks protect --staged --no-banner --exit-code 1; then
+    echo ""
+    echo "[gitleaks blocked] secret detected."
+    echo "  Fix the leak and commit again. If it is a false positive, add a 'gitleaks:allow' comment or update .gitleaksignore."
+    echo "  Force skip (not recommended): SKIP_GITLEAKS=1 git commit"
+    exit 1
+  fi
+fi
+
+
+# 5) code-review-graph incremental update (does not block).
+#    Analysis that originally lived in .git/hooks/pre-commit, merged here.
+if command -v code-review-graph >/dev/null 2>&1; then
+  code-review-graph detect-changes --brief || true
+fi
+
+
+exit 0

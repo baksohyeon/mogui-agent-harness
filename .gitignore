@@ -1,0 +1,27 @@
+node_modules/
+.pnpm-store/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local setup marker
+.setup-done
+
+# code-review-graph cache
+.code-review-graph/
+
+# Codex local adapter files
+.codex/hooks.json
+.codex/config.toml
+
+# Build/test artifacts
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Editor noise
+.idea/
+.vscode/settings.json

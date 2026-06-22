@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# prepare-commit-msg: wiki .md audit_log auto-entry (B-2 follow-up)
+#
+# Auto-append an entry to staged `docs/wiki/**.md` files that *already have an audit_log*.
+#   entry = { action: updated, at: TODAY, by: <git author>, note: <commit subject> }
+#
+# Rules:
+#   - dedup: skip if the last entry has the same (at, by) (one entry per day).
+#   - preserve the first entry (created): compare only the last entry.
+#   - skip files that have no audit_log at all (creation is the author's responsibility).
+#   - skip on merge / squash / amend / template / cherry-pick / rebase.
+#
+# Enable: scripts/install-hooks.sh (`git config core.hooksPath .githooks`)
+# Bypass: SKIP_AUDIT_LOG=1 git commit ...
+
+set -e
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="${2:-}"
+
+# bypass env
+[[ -n "${SKIP_AUDIT_LOG:-}" ]] && exit 0
+
+# skip on merge / squash / amend / template: preserve meaning
+case "$COMMIT_SOURCE" in
+    merge|squash|commit|template) exit 0 ;;
+esac
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+TODAY=$(date +%Y-%m-%d)
+AUTHOR=$(git config user.name)
+
+# commit subject = first non-comment line of the message file
+SUBJECT=$(grep -vE '^\s*#' "$COMMIT_MSG_FILE" | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+[[ -z "$SUBJECT" ]] && exit 0
+
+# python interpreter resolution (avoid the Windows store stub, consistent with pre-commit)
+PYTHON3="python3"
+if command -v python3 >/dev/null 2>&1; then
+    case "$(command -v python3)" in
+        */WindowsApps/python3*) PYTHON3="python" ;;
+    esac
+else
+    PYTHON3="python"
+fi
+
+# staged wiki .md (added or modified)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^docs/wiki/.*\.md$' || true)
+[[ -z "$STAGED" ]] && exit 0
+
+APPENDED=()
+
+while IFS= read -r file; do
+    [[ ! -f "$REPO_ROOT/$file" ]] && continue
+    full="$REPO_ROOT/$file"
+
+    [[ "$(head -1 "$full")" != "---" ]] && continue
+
+    "$PYTHON3" - "$full" "$TODAY" "$AUTHOR" "$SUBJECT" <<'PY'
+import sys, re
+path, today, author, subject = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+
+with open(path, 'r', encoding='utf-8') as f:
+    text = f.read()
+
+m = re.match(r'^(---\n)(.*?)(\n---\n)', text, re.DOTALL)
+if not m:
+    sys.exit(0)
+header, fm, footer = m.group(1), m.group(2), m.group(3)
+lines = fm.split('\n')
+
+# find the audit_log block (root key)
+log_start = None
+log_end = None
+for i, line in enumerate(lines):
+    if re.match(r'^audit_log:\s*(\[\s*\]\s*)?$', line):
+        log_start = i
+        log_end = len(lines)
+        for j in range(i + 1, len(lines)):
+            if re.match(r'^[a-zA-Z_]+:', lines[j]):
+                log_end = j
+                break
+        break
+
+# skip if there is no audit_log
+if log_start is None:
+    sys.exit(0)
+
+# extract the (at, by) of the last entry
+block = lines[log_start + 1:log_end]
+last_at, last_by = None, None
+cur_at, cur_by = None, None
+for ln in block:
+    if re.match(r'^\s*-\s*action:', ln):
+        if cur_at is not None:
+            last_at, last_by = cur_at, cur_by
+        cur_at, cur_by = None, None
+    m_at = re.search(r'at:\s*(\d{4}-\d{2}-\d{2})', ln)
+    m_by = re.search(r'by:\s*(.+?)\s*$', ln)
+    if m_at:
+        cur_at = m_at.group(1)
+    if m_by:
+        last_token = m_by.group(1).strip().strip('"').strip("'")
+        # track the by: line position
+        cur_by = last_token
+if cur_at is not None:
+    last_at, last_by = cur_at, cur_by
+
+# dedup: skip if (at, by) is the same
+if last_at == today and last_by == author:
+    sys.exit(0)
+
+# if it is the inline `[]` form, swap it for multi-line
+if re.match(r'^audit_log:\s*\[\s*\]\s*$', lines[log_start]):
+    lines[log_start] = 'audit_log:'
+
+indent = '  '
+note_escaped = subject.replace('\\', '\\\\').replace('"', '\\"')
+new_entry = [
+    f'{indent}- action: updated',
+    f'{indent}  at: {today}',
+    f'{indent}  by: {author}',
+    f'{indent}  note: "{note_escaped}"',
+]
+
+new_lines = lines[:log_end] + new_entry + lines[log_end:]
+new_fm = '\n'.join(new_lines)
+new_text = header + new_fm + footer + text[m.end():]
+
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(new_text)
+PY
+
+    # git add if it changed (idempotent even if it did not: git add itself is safe)
+    if ! git diff --quiet "$full" 2>/dev/null; then
+        git add "$full"
+        APPENDED+=("$file")
+    fi
+done <<<"$STAGED"
+
+if [[ ${#APPENDED[@]} -gt 0 ]]; then
+    echo "[audit_log] entry appended (action: updated, at: $TODAY, by: $AUTHOR):"
+    for f in "${APPENDED[@]}"; do echo "  - $f"; done
+fi
+
+exit 0
