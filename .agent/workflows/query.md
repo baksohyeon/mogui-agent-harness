@@ -72,7 +72,7 @@ Entry point: the [`docs/wiki/index.md`](../../docs/wiki/index.md) catalog, then 
 
 - `find /` or `rg /`: full-system scans (forbidden)
 - Editing `.code-review-graph/wiki/*.md` directly: auto-generated, refreshes itself when code changes
-- Calling cloud search tools (Pinecone, Weaviate, PageIndex SaaS): avoid external dependencies on a small project
+- Calling hosted/cloud search indexers (e.g. Pinecone, Weaviate): avoid external dependencies on a small project
 
 ---
 
