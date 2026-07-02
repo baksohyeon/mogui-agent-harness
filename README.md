@@ -1,6 +1,8 @@
 # agentic-starter: copy-paste agentic ops boilerplate
 
 > English document. 한국어: [README-ko.md](./README-ko.md)
+>
+> **Source project:** this is the empty, redacted template extracted from **agent-harness** (`dorito-agent-harness`) — the source repo that runs this operating layer for real, with its own decision trail and postmortems. Here you get only the skeleton; none of that history comes along.
 
 This folder sets up a full agentic operating layer in a new repo: an `.agent` context layer, an LLM wiki, GSD planning scaffolding, Claude/Codex hooks, a Cursor rule adapter, and a code-review-graph MCP convention.
 
