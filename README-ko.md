@@ -6,7 +6,7 @@
 
 이 starter는 그 노트 체계를 새 repo에 한 번에 깔아 줍니다. `.agent/`(세션 규칙), `docs/wiki/`(장기 지식), `.planning/`(작업 진행 상태), Claude·Codex hook, Cursor 설정, code-review-graph(코드 구조 지도)까지 빈 골격으로 들어갑니다.
 
-복사하고 `bash scripts/setup.sh`를 실행하면 빈 골격이 생깁니다. 원본 repo의 제품 결정이나 회고는 따라오지 않습니다. 새 repo는 `D-001`(첫 결정 기록)부터 자기 결정을 쌓습니다.
+복사하고 `bash scripts/setup.sh`를 실행하면 빈 골격이 생깁니다. 원본 repo의 제품 결정이나 회고는 따라오지 않습니다. 새 repo는 첫 결정(`D-YYYYMMDD-<author>-<slug>`)부터 자기 결정을 쌓습니다.
 
 > **한국 개발자에게**: 운영 문서(`CLAUDE.md`·`.agent/`·guides)는 영어가 기본이지만 그대로 써도 됩니다. AI host(작업 도구)는 영어 문서를 읽고 한국어로 답합니다. 한국어 프로젝트라면 `no-bak-slang`·`remind-korean-style`·`korean-persona` hook이 한국어 출력 스타일을 잡아 줍니다. 한국어 가이드가 더 필요하면 `docs/wiki/guides/ko/`에 추가합니다.
 
@@ -53,7 +53,7 @@ cp .codex/config.example.toml .codex/config.toml
 
 ### 2단계: 내용 채우기 (AI가 물어봅니다)
 
-`PROMPTS.md`의 **"1. greenfield init"** 프롬프트를 통째로 복사해 지금 쓰는 AI host(Claude Code / Codex / Cursor 등)에 붙여넣습니다. 그러면 AI가 router와 `.agent/` 파일을 읽고, 제품·팀·스택·첫 결정을 물어보며 `{{...}}` 빈칸을 채우고 `D-001`을 만듭니다. 빈칸을 손으로 미리 고치지 않아도 됩니다.
+`PROMPTS.md`의 **"1. greenfield init"** 프롬프트를 통째로 복사해 지금 쓰는 AI host(Claude Code / Codex / Cursor 등)에 붙여넣습니다. 그러면 AI가 router와 `.agent/` 파일을 읽고, 제품·팀·스택·첫 결정을 물어보며 `{{...}}` 빈칸을 채우고 첫 결정을 만듭니다. 빈칸을 손으로 미리 고치지 않아도 됩니다.
 
 붙여넣은 뒤 실제로 어떤 대화가 오가는지는 `docs/bootstrap-walkthrough.md`에서 미리 볼 수 있습니다.
 
@@ -85,7 +85,7 @@ host router (CLAUDE.md / AGENTS.md / .cursorrules / .windsurfrules)
 
 - **`.agent/`**: 지금 세션에서 AI가 어떻게 행동할지 정합니다. 규칙, 압축한 제품·팀·스택 컨텍스트, 러닝 메모리를 둡니다. 결정 원문이나 긴 회의록은 넣지 않습니다.
 - **`.planning/`**: 작업 진행 상태입니다. GSD(작업을 슬롯으로 나눠 관리하는 도구)의 workstream·quick·todo·thread·seed가 여기 들어갑니다. 실행 중인 plan은 아직 확정 지식으로 보지 않습니다.
-- **`docs/wiki/`**: 사람이 승인한 장기 지식입니다. 닫힌 결정(`decisions/D-NNN.md`), 반복 규칙(`guides/`), 사고와 교훈(`postmortem/`)을 둡니다.
+- **`docs/wiki/`**: 사람이 승인한 장기 지식입니다. 닫힌 결정(`decisions/D-*.md`), 반복 규칙(`guides/`), 사고와 교훈(`postmortem/`)을 둡니다.
 - **code-review-graph**: 코드 구조(import·호출 관계·변경 영향)를 보는 지도입니다. 결정 이유는 여기서 찾지 않고 wiki에서 찾습니다.
 
 ### 요청이 들어오면 AI가 하는 일
@@ -109,7 +109,7 @@ host router (CLAUDE.md / AGENTS.md / .cursorrules / .windsurfrules)
 | 닫히지 않은 결정 질문 | `.planning/threads/` |
 | 확신 낮은 아이디어 | `.planning/seeds/` |
 | 여러 단계 작업 | `.planning/workstreams/` |
-| 닫힌 결정 | `docs/wiki/decisions/D-NNN.md` |
+| 닫힌 결정 | `docs/wiki/decisions/D-*.md` |
 | 반복 규칙 | `docs/wiki/guides/` |
 | 사고나 교훈 | `docs/wiki/postmortem/` |
 
@@ -159,7 +159,7 @@ host router (CLAUDE.md / AGENTS.md / .cursorrules / .windsurfrules)
 
 - `.agent/`는 세션 운영 레이어입니다. 회의록이나 긴 실행 상태를 넣지 않습니다.
 - `.planning/`은 GSD 실행 상태입니다. 열린 질문은 `threads/`, 작은 작업은 `quick/`, 낮은 확신은 `seeds/`, 큰 작업은 `workstreams/`로 보냅니다.
-- `docs/wiki/`는 장기 지식입니다. 닫힌 결정은 `decisions/D-NNN.md`, 반복 규칙은 `guides/`, 사고와 교훈은 `postmortem/`에 둡니다.
+- `docs/wiki/`는 장기 지식입니다. 닫힌 결정은 `decisions/D-*.md`, 반복 규칙은 `guides/`, 사고와 교훈은 `postmortem/`에 둡니다.
 - code-review-graph MCP는 코드 구조용입니다. 문서 검색 엔진처럼 쓰지 않습니다.
 - 중요한 guide/ADR/postmortem을 만든 뒤에는 Review Gate Quiz를 최대 세 문항으로 냅니다.
 - 긴 작업 뒤에는 `docs/wiki/postmortem/temp/`에 이어받기 snapshot을 남깁니다.

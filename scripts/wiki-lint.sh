@@ -128,7 +128,7 @@ fi
 
 # ============================================================
 # 3b. id matches filename (decisions) and id/seq match filename (postmortem)
-#       - decisions/D-NNN.md : id == filename stem (exact match)
+#       - decisions/D-YYYYMMDD-<author>-<slug>.md : id == filename stem (exact match)
 #       - postmortem/NNN-... : id starts with postmortem-<NNN>- and seq == leading number
 #     *.template.md is a placeholder, so it is excluded.
 # ============================================================

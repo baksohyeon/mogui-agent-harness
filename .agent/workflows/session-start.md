@@ -14,7 +14,7 @@ audit_log:
     by: "@git_author"
     note: "Generic starter workflow."
 relations:
-  - id: D-092
+  - id: D-20260101-dana-example
     label: implements
 ---
 
