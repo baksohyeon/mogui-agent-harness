@@ -12,6 +12,15 @@
 
 Automatic memory update: "remember / don't forget / from now on / don't do" triggers an immediate write to Memory.md (protocol = Instructions.md § Memory Update Protocol).
 
+## First-entry autonomous bootstrap
+
+If `.setup-done` is missing or `{{...}}` placeholders remain, setup has not been completed. Run the appropriate flow yourself instead of telling the human to type commands:
+
+- Empty/greenfield target: run `bash scripts/setup.sh`, then fill the `{{...}}` placeholders by asking the user (see `PROMPTS.md` #1).
+- Existing project target: run `bash scripts/ingest.sh <target>` (non-destructive), then report the gap report and any `*.starter` conflicts for the human to adjudicate (see `PROMPTS.md` #2).
+
+This contract is host-agnostic: Claude Code and Codex must behave identically here, with no Claude-specific tooling assumed. After either flow, still read `.agent/Instructions.md`, `.agent/Context.md`, and `.agent/Memory.md` before answering.
+
 ## Required and recommended tools
 
 | Tool | Verify | Install |
