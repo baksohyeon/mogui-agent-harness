@@ -125,8 +125,17 @@ The original form of this workflow assumes a multi-person team plus terminal mul
 - Do not use team setup scripts (`setup-team.sh` and the like).
 - Saving workflow templates as shell scripts for frequently used patterns still applies in a solo setup.
 
+## Subagent Commit Discipline
+
+When you fan work out to subagents (Triple Crown Phase 3 / `superpowers:dispatching-parallel-agents`):
+
+- **Subagents write files; the orchestrator commits.** For any multi-file or transactional change, have subagents produce files only and let the orchestrator verify, then commit atomically. A subagent that dies mid-run loses its in-process state, but files already written to disk survive — a half-finished commit made by the subagent does not, and it lands a broken intermediate in history.
+- **If a subagent must commit, each commit must stand on its own.** Splitting one logical change across commits (e.g. "rename files" then "fix the references to them") leaves broken links if the run is interrupted between the two. Keep interdependent edits in a single commit.
+- **On resume after a failed or backgrounded task, never assume it landed.** Verify actual state before continuing: `git log` (which commits exist), `git show --stat <sha>` (a commit's real file scope), and a completion-invariant check — grep for the very pattern the task was meant to eliminate and require zero matches.
+
 ## Never Do
 
+- Assuming a crashed or backgrounded subagent's work landed without checking commit scope (`git show --stat`) and a completion invariant. "There is a commit" is not "the task finished."
 - Slipping a code change into Pattern 4 (daily report). The report stays read-only.
 - Skipping Phase 1 (root cause analysis) in Pattern 2 (hotfix) and jumping straight to Phase 2 (fix). That is the symptom band-aid trap.
 - Running team-dispatch commands (`tmux send-keys`) in a solo setup.
