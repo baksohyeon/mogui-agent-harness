@@ -86,7 +86,7 @@ Writing the postmortem is not the improvement; graduating its lessons to a durab
 
 Keep the approval gate. Meaning-changing wiki promotions (ADR, long-term context, memory) are not recorded in step 2 without user approval — hold them as a candidate plus a todo until approved. Only cheap-to-reverse homes (workflow rules, hooks, tests, operational guide rules) graduate immediately. For promotion criteria and procedure, follow [guide 05 (decisions and postmortems)](../../docs/wiki/guides/05-decisions-and-postmortems.md).
 
-Draft snapshots in `postmortem/temp/` may omit the Promotion section; fill it in and run the four steps when moving to the permanent location.
+Draft snapshots in `docs/wiki/postmortem/temp/` may omit the Promotion section; fill it in and run the four steps when moving to the permanent location.
 
 ## Writing rules
 
