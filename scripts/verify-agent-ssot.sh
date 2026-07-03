@@ -25,6 +25,7 @@ required_files=(
   .claude/hooks/load-context.sh .claude/hooks/setup-check.sh .claude/hooks/memory-health.sh
   .codex/README.md .codex/hooks.example.json .codex/config.example.toml
   scripts/setup.sh scripts/install-hooks.sh scripts/verify-agent-ssot.sh scripts/decisions-index.sh
+  scripts/ingest.sh scripts/smoke-codex.sh
   .githooks/pre-commit .githooks/prepare-commit-msg
   .planning/README.md
   docs/wiki/index.md docs/wiki/_schema/frontmatter.md docs/wiki/decisions/README.md docs/wiki/guides/README.md docs/wiki/archive/README.md

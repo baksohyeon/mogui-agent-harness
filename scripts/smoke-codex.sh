@@ -18,6 +18,8 @@
 # its result, or degrades gracefully to a printed manual command. It never
 # waits on interactive input.
 
+# Intentionally no -e: this script must continue past a failing check to
+# accumulate failures[] and capture the guarded codex exec exit code.
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
