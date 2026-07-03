@@ -58,11 +58,21 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if [ ! -d "$TARGET" ]; then
-  [ "$DRY_RUN" -eq 1 ] && echo "==> --dry-run: target '$TARGET' does not exist yet, would be created"
+if [ -d "$TARGET" ]; then
+  TARGET="$(cd "$TARGET" && pwd)"
+elif [ "$DRY_RUN" -eq 1 ]; then
+  # Dry-run must make zero filesystem changes. Resolve the parent's realpath
+  # and keep the not-yet-existent leaf as a string, so we never mkdir.
+  echo "==> --dry-run: target '$TARGET' does not exist yet, would be created"
+  parent="$(dirname "$TARGET")"
+  leaf="$(basename "$TARGET")"
+  if [ -d "$parent" ]; then
+    TARGET="$(cd "$parent" && pwd)/$leaf"
+  fi
+else
   mkdir -p "$TARGET"
+  TARGET="$(cd "$TARGET" && pwd)"
 fi
-TARGET="$(cd "$TARGET" && pwd)"
 
 if [ "$SOURCE" = "$TARGET" ]; then
   echo "error: target path resolves to the same directory as this starter repo ($SOURCE)" >&2
@@ -86,13 +96,13 @@ EXCLUDES=(.git .superpowers .worktrees node_modules .DS_Store)
 # ============================================================================
 CONFLICT_PRONE=(CLAUDE.md AGENTS.md README.md .gitignore .cursorrules .windsurfrules)
 
+# Conflict-prone matching is anchored to the literal root-relative path only.
+# A nested file that happens to share a basename (e.g. .codex/README.md,
+# docs/wiki/decisions/README.md) is an ordinary file and must copy normally.
 is_conflict_prone() {
   local rel="$1"
-  local name
-  name="$(basename "$rel")"
   for c in "${CONFLICT_PRONE[@]}"; do
     [ "$rel" = "$c" ] && return 0
-    [ "$name" = "$c" ] && return 0
   done
   return 1
 }
@@ -101,8 +111,10 @@ RSYNC_EXCLUDE_ARGS=()
 for e in "${EXCLUDES[@]}"; do
   RSYNC_EXCLUDE_ARGS+=(--exclude "$e")
 done
+# Leading slash anchors the exclude to the transfer root, so nested files with
+# the same basename are not excluded.
 for c in "${CONFLICT_PRONE[@]}"; do
-  RSYNC_EXCLUDE_ARGS+=(--exclude "$c")
+  RSYNC_EXCLUDE_ARGS+=(--exclude "/$c")
 done
 
 # ============================================================================
@@ -111,10 +123,45 @@ done
 ADDED=()
 STARTER_STAGED=()
 SKIPPED_IDENTICAL=()
+STARTER_PRESERVED=()
 
 record_add() { ADDED+=("$1"); }
 record_starter() { STARTER_STAGED+=("$1"); }
 record_skip() { SKIPPED_IDENTICAL+=("$1"); }
+record_starter_preserved() { STARTER_PRESERVED+=("$1"); }
+
+# Stage the starter version of a conflicting file as <name>.starter, but never
+# clobber an existing *.starter (non-destructive constraint #4). Returns via
+# the accumulators only. Args: <rel> <starter_file>
+stage_starter() {
+  local rel="$1"
+  local starter_file="$2"
+  if [ -e "$starter_file" ]; then
+    record_starter_preserved "$rel"
+    echo "  [WARN] $starter_file already exists; leaving it untouched (not re-staged)"
+    return 0
+  fi
+  [ "$DRY_RUN" -eq 0 ] && cp "$SOURCE/$rel" "$starter_file"
+  record_starter "$rel"
+}
+
+# ============================================================================
+# Snapshot which files already existed in TARGET before we copy anything.
+# The "other pre-existing conflicts" pass below uses this to distinguish a
+# genuine pre-existing file (rsync --ignore-existing skipped it) from a file
+# this run just added (which must not be re-reported as skipped-identical).
+# newline-delimited list of root-relative paths; matched with exact grep -Fx.
+# ============================================================================
+PRE_EXISTING=""
+if [ -d "$TARGET" ]; then
+  PRE_EXISTING="$(cd "$TARGET" && find . -type f -print 2>/dev/null | sed 's|^\./||')"
+fi
+
+target_pre_existed() {
+  # Args: <root-relative path>. True if it was present before this run.
+  [ -n "$PRE_EXISTING" ] || return 1
+  printf '%s\n' "$PRE_EXISTING" | grep -Fxq -- "$1"
+}
 
 # ============================================================================
 # Copy step
@@ -175,18 +222,16 @@ for rel in "${CONFLICT_PRONE[@]}"; do
   elif cmp -s "$src_file" "$dst_file"; then
     record_skip "$rel"
   else
-    starter_file="$dst_file.starter"
-    if [ "$DRY_RUN" -eq 0 ]; then
-      cp "$src_file" "$starter_file"
-    fi
-    record_starter "$rel"
+    stage_starter "$rel" "$dst_file.starter"
   fi
 done
 
 # ============================================================================
-# Any other file that differs between SOURCE and TARGET after the rsync pass
-# (rsync --ignore-existing already skipped writing over it; this loop makes
-# the conflict visible in the report and stages a *.starter copy).
+# Any file that ALREADY existed in TARGET before this run (rsync
+# --ignore-existing skipped writing over it). This pass makes that conflict
+# visible in the report: identical -> skipped, different -> staged *.starter.
+# Files this run just added are excluded via the PRE_EXISTING snapshot so
+# they are reported once (as added), not double-counted as skipped.
 # ============================================================================
 echo "==> Checking for other pre-existing conflicts"
 while IFS= read -r -d '' src_file; do
@@ -201,18 +246,17 @@ while IFS= read -r -d '' src_file; do
   [ "$skip" -eq 1 ] && continue
   is_conflict_prone "$rel" && continue
 
+  # Only files that pre-existed in the target are conflicts here. Anything
+  # rsync just copied this run is already recorded as added.
+  target_pre_existed "$rel" || continue
+
   dst_file="$TARGET/$rel"
-  [ -e "$dst_file" ] || continue
   [ -f "$dst_file" ] || continue
 
   if cmp -s "$src_file" "$dst_file"; then
     record_skip "$rel"
   else
-    starter_file="$dst_file.starter"
-    if [ "$DRY_RUN" -eq 0 ] && [ ! -e "$starter_file" ]; then
-      cp "$src_file" "$starter_file"
-    fi
-    record_starter "$rel"
+    stage_starter "$rel" "$dst_file.starter"
   fi
 done < <(find "$SOURCE" -type f -print0)
 
@@ -265,6 +309,13 @@ if [ "${#SKIPPED_IDENTICAL[@]}" -eq 0 ]; then
   echo "  (none)"
 else
   printf '  = %s\n' "${SKIPPED_IDENTICAL[@]}"
+fi
+if [ "${#STARTER_PRESERVED[@]}" -gt 0 ]; then
+  echo ""
+  echo "Left untouched, a *.starter already existed ($(( ${#STARTER_PRESERVED[@]} )) file(s)):"
+  for f in "${STARTER_PRESERVED[@]}"; do
+    echo "  ! $f.starter (pre-existing, not overwritten)"
+  done
 fi
 
 echo ""
