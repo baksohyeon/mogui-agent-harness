@@ -70,13 +70,27 @@ Draft snapshots may use the same fields with `status: draft`.
 4. First questions and hypotheses: table with `H1`, `H2`, ordered cheapest/highest-signal first.
 5. Diagnosis: commands run, trimmed verbatim output, and which hypothesis each result supports or rejects.
 6. Resolution or recommendation: what changed, what did not change, and why.
-7. Prevention and operating notes: checklist, guard, test, guide, hook, or explicit "none".
-8. Promotion (graduation): for each prevention item in section 7, decide its durable home — a workflow rule, a guide, an ADR, or a hook — then actually write it there and link both ways (postmortem ↔ rule). Park items you cannot promote yet in `.planning/todos/`. A prevention list nobody graduates just lets the incident recur; this step is part of the postmortem, not a follow-up someone must remember.
-9. Timeline: short chronological bullets.
+7. Prevention and operating notes: checklist, guard, test, guide, hook, or explicit "none". Each item is graduated in the Promotion step.
+8. Timeline: short chronological bullets.
+9. Promotion (graduation): pick a home for each prevention item, record the approval-free ones, link both ways, and todo the rest. Placed after the timeline, before the appendix.
 10. Appendix: command cheat sheet if shell/CLI commands were important.
+
+## Promotion (graduation)
+
+Writing the postmortem is not the improvement; graduating its lessons to a durable home is. After the timeline and before the appendix, add a "Promotion (graduation)" section and run these four steps on every prevention item from the prevention section:
+
+1. Pick a home: assign each item to one of `workflow-rule` (a rule added to `.agent/workflows/<name>.md`), `guide` (`docs/wiki/guides/`), `ADR` (`docs/wiki/decisions/D-*.md`), `hook`/`test` (automation under `.claude/hooks/` or the test suite), or `none` (by design).
+2. Record it for real: for approval-free homes (workflow rule, hook, test, operational guide rule), make the change in that file now. Listing a candidate and stopping is not graduation.
+3. Link both ways: add the rule path to the postmortem `relations:`, and add a back-link to this postmortem in the rule file. A one-way link is invisible to the next agent.
+4. Do not drop the rest: items you cannot graduate now (especially approval-required ones) go to `.planning/todos/` so they are not lost. Only `none` (by design) closes without a todo.
+
+Keep the approval gate. Meaning-changing wiki promotions (ADR, long-term context, memory) are not recorded in step 2 without user approval — hold them as a candidate plus a todo until approved. Only cheap-to-reverse homes (workflow rules, hooks, tests, operational guide rules) graduate immediately. For promotion criteria and procedure, follow [guide 05 (decisions and postmortems)](../../docs/wiki/guides/05-decisions-and-postmortems.md).
+
+Draft snapshots in `postmortem/temp/` may omit the Promotion section; fill it in and run the four steps when moving to the permanent location.
 
 ## Writing rules
 
+- Graduate, do not just list: every prevention item gets a home, a real change (for approval-free homes), and a two-way link.
 - Observation, then interpretation, then next step. Do not skip reasoning links.
 - Prefer primary sources: repo files, workflow YAML, CLI output, API responses.
 - State explicitly what was not verified.
