@@ -24,7 +24,7 @@
 새 repo 루트에서 실행합니다. `setup.sh`는 git repo가 아니면 자동으로 `git init`을 합니다. `git init`을 먼저 하지 않아도 됩니다.
 
 ```bash
-cp -R <source-repo>/templates/agentic-starter/. .
+cp -R <source-repo>/. .
 chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
@@ -59,13 +59,19 @@ cp .codex/config.example.toml .codex/config.toml
 
 ### 기존 프로젝트라면? ingest를 쓰세요 (비파괴)
 
-위 `cp -R`는 빈 repo용입니다. 이미 코드·문서가 있는 repo에선 그대로 쓰면 안 됩니다. 기존 `README.md`·`CLAUDE.md`·`.gitignore`를 덮어씁니다. 대신 `PROMPTS.md`의 **"2. ingest into an existing project"** 프롬프트를 붙여넣습니다. 무엇을 하고 왜 안전한지:
+위 `cp -R`는 빈 repo용입니다. 이미 코드·문서가 있는 repo에선 그대로 쓰면 안 됩니다. 기존 `README.md`·`CLAUDE.md`·`.gitignore`를 덮어씁니다. 대신 `scripts/ingest.sh`를 씁니다.
 
-- **git 히스토리는 안 건드립니다.** `setup.sh`의 `git init`은 디렉터리가 아직 git repo가 아닐 때만 돕니다. 이미 git repo면 no-op입니다. git이 "Reinitialized" 한 줄만 출력하고 커밋·브랜치·파일을 아무것도 잃지 않습니다.
+```bash
+bash <starter-repo-경로>/scripts/ingest.sh <기존-프로젝트-경로>
+```
+
+`--dry-run`을 붙이면 아무것도 쓰지 않고 gap report만 미리 봅니다. 또는 `PROMPTS.md`의 **"2. ingest into an existing project"** 프롬프트를 붙여넣어 AI host가 실행하고 머지를 안내하게 할 수도 있습니다. 무엇을 하고 왜 안전한지:
+
+- **git 히스토리는 안 건드립니다.** `ingest.sh`는 대상의 git 히스토리를 건드리지 않고, `git config core.hooksPath`도 직접 실행하지 않습니다.
 - **기존 파일은 절대 안 덮어씁니다.** ingest는 `rsync -a --ignore-existing`(없으면 `cp -Rn`)로 골격을 복사해, 이미 있는 건 그대로 두고 없는 것만 더합니다.
 - **`docs/` 이름이 겹쳐도 괜찮습니다.** starter가 더하는 건 `docs/wiki/`와 `docs/bootstrap-walkthrough.md`뿐입니다. `--ignore-existing` 덕에 기존 `docs/` 파일은 유지되고 starter의 `docs/wiki/`만 옆에 더해집니다. 이미 `docs/wiki/`가 있으면 starter 사본을 `*.starter` 이름으로 옆에 두고 diff를 보여줘, 머지를 직접 정합니다.
 - **충돌하는 최상위 파일**(`CLAUDE.md`·`README.md`·`.gitignore`·`.agent`)은 덮어쓰지 않고 `*.starter` 이름으로 옆에 둡니다. 머지는 손으로 합니다.
-- **husky나 lefthook을 이미 쓴다면** hook 설치는 건너뜁니다. `setup.sh`가 `core.hooksPath`를 `.githooks`로 바꿔 기존 체인을 가로채기 때문입니다. `.githooks/pre-commit`의 frontmatter 자동화만 기존 hook에 머지합니다.
+- **husky나 lefthook을 이미 쓴다면** `ingest.sh`가 이를 감지해 경고만 출력하고 hook은 건드리지 않습니다. `setup.sh`는 `core.hooksPath`를 `.githooks`로 바꿔 기존 체인을 가로챌 수 있으므로, 그 경고가 뜨면 hook 설치는 건너뛰고 `.githooks/pre-commit`의 frontmatter 자동화만 기존 hook에 머지합니다.
 
 이미 이 시스템을 쓰는 repo를 클론한 동료는 **"3. coworker 온보딩"**을 씁니다.
 
