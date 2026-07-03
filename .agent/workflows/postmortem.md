@@ -71,8 +71,9 @@ Draft snapshots may use the same fields with `status: draft`.
 5. Diagnosis: commands run, trimmed verbatim output, and which hypothesis each result supports or rejects.
 6. Resolution or recommendation: what changed, what did not change, and why.
 7. Prevention and operating notes: checklist, guard, test, guide, hook, or explicit "none".
-8. Timeline: short chronological bullets.
-9. Appendix: command cheat sheet if shell/CLI commands were important.
+8. Promotion (graduation): for each prevention item in section 7, decide its durable home — a workflow rule, a guide, an ADR, or a hook — then actually write it there and link both ways (postmortem ↔ rule). Park items you cannot promote yet in `.planning/todos/`. A prevention list nobody graduates just lets the incident recur; this step is part of the postmortem, not a follow-up someone must remember.
+9. Timeline: short chronological bullets.
+10. Appendix: command cheat sheet if shell/CLI commands were important.
 
 ## Writing rules
 
