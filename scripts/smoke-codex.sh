@@ -31,7 +31,7 @@ case "${1:-}" in
     RUN_LIVE=1
     ;;
   -h|--help)
-    sed -n '1,18p' "$0"
+    sed -n '/^# Usage:/,/^$/p' "$0"
     exit 0
     ;;
   *)
