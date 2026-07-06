@@ -27,7 +27,7 @@ This contract is host-agnostic: Claude Code and Codex must behave identically he
 |------|--------|---------|
 | **code-review-graph** | `code-review-graph status` | `uvx code-review-graph serve` or see the MCP config |
 | **GSD** | `which gsd-tools` | `npx @opengsd/gsd-core@latest` |
-| **gstack** | `test -d ~/.claude/skills/gstack/bin` | `git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup` |
+| **gstack** | `command -v gstack` (or set `GSTACK_HOME`) | `git clone --depth 1 https://github.com/garrytan/gstack.git <host-skills-dir>/gstack && (cd <host-skills-dir>/gstack && ./setup)` |
 | **Superpowers** | check the host plugin manager | install per host |
 
 Workflow definitions live in [`.agent/workflows/triple-crown.md`](./.agent/workflows/triple-crown.md).
