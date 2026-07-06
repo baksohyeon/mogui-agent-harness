@@ -3,15 +3,15 @@ id: guide-host-runtime-and-hooks
 title: "Host Runtime and Hooks"
 type: guide
 created_at: YYYY-MM-DD
-created_by: Dorito
-updated_at: 2026-07-06
-updated_by: Dorito
+created_by: @git_author
+updated_at: YYYY-MM-DD
+updated_by: @git_author
 last_verified_at: YYYY-MM-DD
-last_verified_by: Dorito
+last_verified_by: @git_author
 audit_log:
   - action: created
     at: YYYY-MM-DD
-    by: Dorito
+    by: @git_author
     note: "Initial host runtime guide from agentic-starter."
 status: active
 tags: [guide, runtime, hooks, claude-code, codex, cursor]
