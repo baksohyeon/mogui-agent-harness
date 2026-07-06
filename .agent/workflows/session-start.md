@@ -36,7 +36,7 @@ If the work is code exploration, look at the code-review-graph MCP first. If the
 
 ## How to read hook stdout
 
-Hook stdout is mostly guidance. But if a line carries the `[AGENT-ASK]` prefix, it is an action trigger, not guidance. When that line appears, the agent asks the user directly, and once the user approves, runs the command the hook wrote.
+Hook stdout is mostly guidance. But an action-trigger prefix means act, not read. `[AGENT-ASK]`: the agent asks the user directly, and once the user approves, runs the command the hook wrote. `[AGENT-BOOTSTRAP]`: the autonomous case — the agent runs the router's First-entry bootstrap flow itself, no yes/no prompt.
 
 The SessionStart hook does not block. The thing that actually blocks file writes is the PreToolUse hook. In this repo the representative cases are emoji and translated-slang blocking.
 

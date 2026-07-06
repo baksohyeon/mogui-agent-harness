@@ -56,7 +56,7 @@ Cursor uses project rules. This starter includes `.cursor/rules/agentic-router.m
 
 ## Hook Output
 
-If a hook prints `[AGENT-ASK]`, treat it as an action trigger. Ask the user, then run the proposed command if approved. Do not ignore it as a normal log line.
+If a hook prints an action-trigger prefix, treat it as an action, not a normal log line. `[AGENT-ASK]`: ask the user, then run the proposed command if approved. `[AGENT-BOOTSTRAP]`: the autonomous case — run the router's First-entry bootstrap flow yourself, no yes/no prompt.
 
 ## Verification
 

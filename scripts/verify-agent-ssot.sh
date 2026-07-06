@@ -19,12 +19,14 @@ required_files=(
   CLAUDE.md AGENTS.md .cursorrules .windsurfrules
   .agent/Instructions.md .agent/Context.md .agent/Memory.md
   .agent/workflows/triple-crown.md
-  .agents/skills/postmortem/SKILL.md
+  .agent/loops/LOOP.md .agent/workflows/daily-triage.md
+  .agents/skills/postmortem/SKILL.md .agents/skills/daily-triage/SKILL.md
   .cursor/mcp.json .cursor/rules/agentic-router.mdc
   .claude/settings.json
   .claude/hooks/load-context.sh .claude/hooks/setup-check.sh .claude/hooks/memory-health.sh
   .codex/README.md .codex/hooks.example.json .codex/config.example.toml
   scripts/setup.sh scripts/install-hooks.sh scripts/verify-agent-ssot.sh scripts/decisions-index.sh
+  scripts/ingest.sh scripts/smoke-codex.sh
   .githooks/pre-commit .githooks/prepare-commit-msg
   .planning/README.md
   docs/wiki/index.md docs/wiki/_schema/frontmatter.md docs/wiki/decisions/README.md docs/wiki/guides/README.md docs/wiki/archive/README.md
@@ -98,7 +100,10 @@ for f in "${routers[@]}"; do
   done
 done
 
-for f in .claude/hooks/*.sh .codex/hooks/*.sh; do
+# Syntax-check every shell entrypoint: hook scripts AND the top-level scripts/
+# (ingest.sh, smoke-codex.sh, setup.sh, ...). These are executable entrypoints,
+# so a syntax error should fail the SSOT gate, not surface only at run time.
+for f in .claude/hooks/*.sh .codex/hooks/*.sh scripts/*.sh; do
   [[ -e "$f" ]] || continue
   bash -n "$f" && ok "$f syntax" || fail "$f syntax error"
 done

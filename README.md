@@ -20,10 +20,12 @@ The flow has **two stages**. The part people get wrong first:
 Run this in the new repo root. `setup.sh` runs `git init` if the directory is not a git repo, so you don't have to `git init` first.
 
 ```bash
-cp -R <source-repo>/templates/agentic-starter/. .
+rsync -a --exclude .git <source-repo>/ .
 chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
+
+> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `tar --exclude .git -C <source-repo> -cf - . | tar -C . -xf -` — copies everything except the starter's `.git`, so your new repo starts clean without touching any git metadata the target may already have.
 
 `setup.sh` only does git init + git hook install + skeleton verification. This stage does not ask for any product information.
 
@@ -44,13 +46,19 @@ To preview *what the conversation looks like* after you paste, read `docs/bootst
 
 ### Existing project? Use ingest instead (non-destructive)
 
-The `cp -R` above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use the ingest path instead, by pasting the **"2. ingest into an existing project"** prompt from `PROMPTS.md`. What it does, and why it is safe:
+The Stage 1 copy above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use `scripts/ingest.sh` instead:
 
-- **Your git history is untouched.** `setup.sh` runs `git init` only when the directory is not a git repo yet. On an existing repo it is a no-op: git prints "Reinitialized" and changes nothing, so no commits, branches, or files are lost.
+```bash
+bash <path-to-starter-repo>/scripts/ingest.sh <path-to-your-existing-project>
+```
+
+Add `--dry-run` to preview the gap report without writing anything. Or paste the **"2. ingest into an existing project"** prompt from `PROMPTS.md` and let your AI host run it and walk you through the merge. What it does, and why it is safe:
+
+- **Your git history is untouched.** `ingest.sh` never touches the target's git history, and it never runs `git config core.hooksPath` itself.
 - **Existing files are never overwritten.** Ingest copies the skeleton with `rsync -a --ignore-existing` (or `cp -Rn`), so anything you already have stays as-is and only the missing pieces get added.
 - **A `docs/` name clash is fine.** The starter only contributes `docs/wiki/` and `docs/bootstrap-walkthrough.md`. With `--ignore-existing`, your existing `docs/` files are kept and the starter's `docs/wiki/` is added next to them. If you already have a `docs/wiki/`, the starter copy is placed as `*.starter` beside yours with a diff, so you decide what to merge.
 - **Conflicting top-level files** (`CLAUDE.md`, `README.md`, `.gitignore`, `.agent`) are placed as `*.starter` next to yours, never over them. You merge them by hand.
-- **If you already use husky or lefthook**, skip the hook install. `setup.sh` would repoint `core.hooksPath` to `.githooks` and hijack your chain, so merge only `.githooks/pre-commit`'s frontmatter automation into your existing hooks.
+- **If you already use husky or lefthook**, `ingest.sh` detects it and prints a warning instead of touching hooks. `setup.sh` would otherwise repoint `core.hooksPath` to `.githooks` and hijack your chain, so in that case skip hook installation and merge only `.githooks/pre-commit`'s frontmatter automation into your existing hooks.
 
 A teammate who cloned a repo that already uses this system uses **"3. coworker onboarding"** instead.
 
@@ -117,7 +125,8 @@ The deeper docs live in `docs/wiki/guides/`. The section above is the summary; t
 | `.cursor/rules/agentic-router.mdc` `.cursor/mcp.json` | Cursor project rule adapter and code-review-graph MCP config |
 | `.agent/` | Session operating rules, compressed context, learning memory |
 | `.agent/workflows/` | Internal workflows the agent follows repeatedly (`triple-crown.md` 5-phase by scale, `automation-patterns.md` 4 patterns by type) |
-| `.agents/skills/postmortem/` `.agents/skills/scope/` | Evidence-based postmortem skill, work-sizing scope skill. Author = git author. |
+| `.agent/loops/` | Loop-engineering layer: `LOOP.md` loop registry (budgets, kill switch, L1-L3 maturity ladder) plus the `daily-triage` read-only L1 loop (state file + append-only run log) |
+| `.agents/skills/postmortem/` `.agents/skills/scope/` `.agents/skills/daily-triage/` | Evidence-based postmortem skill, work-sizing scope skill, daily-triage loop skill. Author = git author. |
 | `.claude/` | Claude Code hook adapter and the `.claude/commands/scope.md` slash command |
 | `.codex/` | Codex hook/MCP adapter templates |
 | `.githooks/` | Helper hooks for wiki frontmatter and the audit log |
@@ -158,7 +167,7 @@ The greenfield init prompt (`PROMPTS.md`) detects your project's language and co
 | hook | default | description |
 |---|---|---|
 | `load-context.sh` | keep | At SessionStart, prints only `.agent/Context.md` and points the agent to read Instructions/Memory directly. |
-| `setup-check.sh` | keep | If `.setup-done` is missing, prompts to run setup via `[AGENT-ASK]`. |
+| `setup-check.sh` | keep | If `.setup-done` is missing, emits `[AGENT-BOOTSTRAP]` so the agent runs the router's autonomous bootstrap flow itself (no yes/no prompt). |
 | `memory-health.sh` | recommended | Warns on the repo-name-based archive path and stale Memory state. |
 | `memory-selfcheck.sh` | recommended | Surfaces load-bearing feedback rules each turn. Placeholder substitution required. |
 | `wiki-health.sh` | recommended | Warns only when an active wiki doc's `last_verified_at` is over 180 days. |

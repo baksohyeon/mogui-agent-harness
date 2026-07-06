@@ -17,7 +17,7 @@ It's written with three readers in mind.
 From the new project root. `<source>` is the path where you got the starter.
 
 ```bash
-cp -R <source>/templates/agentic-starter/. .
+cp -R <source>/. .
 bash scripts/setup.sh
 ```
 

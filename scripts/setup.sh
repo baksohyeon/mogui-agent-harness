@@ -56,10 +56,48 @@ fi
 # ============================================================================
 echo ""
 echo "==> 3/4 Verify AI tools (optional; the starter skeleton works without them)"
-[ -d "$HOME/.claude/skills/gstack/bin" ] && echo "  [OK] gstack" || {
-  echo "  [CHECK] gstack missing. Install:"
-  echo "          git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && (cd ~/.claude/skills/gstack && ./setup)"
+
+# Host-agnostic plugin/skill detection. No single vendor (Claude Code, Codex,
+# Cursor, opencode, ...) is assumed: probe every known agent config root, and
+# let an explicit <TOOL>_HOME env var override. Teach setup.sh about another
+# host by adding its config root to HOST_ROOTS.
+HOST_ROOTS=(
+  "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  "$HOME/.config/claude"
+  "${CODEX_HOME:-$HOME/.codex}"
+  "$HOME/.config/codex"
+  "$HOME/.cursor"
+  "$HOME/.config/opencode"
+)
+
+# plugin_found <env_override_path> <name-pattern>... -> 0 if the override exists,
+# or any host root contains a matching entry (case-insensitive, depth-limited
+# search). Vendor-neutral by construction: it never hard-codes a single host's
+# plugin/skill layout, which varies (e.g. plugins/data/*, plugins/cache/*/*,
+# skills/*) across Claude Code, Codex, Cursor, opencode, ...
+plugin_found() {
+  local override="$1"; shift
+  [ -n "$override" ] && [ -e "$override" ] && return 0
+  local pat root hit
+  for pat in "$@"; do
+    for root in "${HOST_ROOTS[@]}"; do
+      [ -d "$root" ] || continue
+      hit="$(find "$root" -maxdepth 5 -iname "$pat" -print 2>/dev/null | head -n1 || true)"
+      [ -n "$hit" ] && return 0
+    done
+  done
+  return 1
 }
+
+# gstack: a skill bundle exposing bin/, or a `gstack` binary on PATH.
+if command -v gstack >/dev/null 2>&1 \
+  || plugin_found "${GSTACK_HOME:-}" "*gstack*"; then
+  echo "  [OK] gstack"
+else
+  echo "  [CHECK] gstack missing. Clone into your host's skills dir (or set GSTACK_HOME):"
+  echo "          git clone --depth 1 https://github.com/garrytan/gstack.git <host-skills-dir>/gstack && (cd <host-skills-dir>/gstack && ./setup)"
+fi
+
 command -v gsd-tools >/dev/null 2>&1 && echo "  [OK] GSD (gsd-tools)" || {
   echo "  [CHECK] GSD missing. Install:"
   echo "          npx @opengsd/gsd-core@latest"
@@ -68,7 +106,16 @@ command -v code-review-graph >/dev/null 2>&1 && echo "  [OK] code-review-graph" 
   echo "  [CHECK] code-review-graph missing. Install/serve:"
   echo "          uvx code-review-graph serve   (then wire .cursor/mcp.json or your host MCP config)"
 }
-echo "  [NOTE] Superpowers: install via your host plugin manager (see CLAUDE.md tools table)."
+
+# Superpowers: a plugin/skill bundle. Detection stays host-agnostic (no ~/.claude
+# assumption) so a vendor-neutral install on ANY host counts; set SUPERPOWERS_HOME
+# to point at an explicit install.
+if plugin_found "${SUPERPOWERS_HOME:-}" "*superpowers*"; then
+  echo "  [OK] Superpowers"
+else
+  echo "  [CHECK] Superpowers missing. Install via your host's plugin manager (see CLAUDE.md tools table),"
+  echo "          or set SUPERPOWERS_HOME to an existing install."
+fi
 
 # ============================================================================
 # 4/4 Agent starter wiring verify

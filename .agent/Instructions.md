@@ -41,7 +41,7 @@ Answer as if explaining to a junior developer: lead with the conclusion, then ci
 3. **Update memory immediately**: when the user says `"remember this / don't forget / from now on / don't do that"`, update [Memory.md](./Memory.md) right away
 4. **Sensitive data**: never print or commit `.env`, credentials, or secret keys
 5. **Keep answers short**: lead with the essentials, trim again when it runs long
-6. **Hook action signals**: if SessionStart/PostToolUse hook output contains a line with the `[AGENT-ASK]` prefix, treat it as an action trigger, not a notice. Ask the user immediately via `AskUserQuestion` as written, then run the specified command based on the response. Do not let it slide by.
+6. **Hook action signals**: if SessionStart/PostToolUse hook output contains an action-trigger prefix, treat it as an action, not a notice. `[AGENT-ASK]` → ask the user immediately, using your host's question/prompt mechanism, as written, then run the specified command based on the response. `[AGENT-BOOTSTRAP]` → the autonomous case: run the router's First-entry bootstrap flow yourself (no yes/no prompt), then continue. Do not let either slide by.
 7. **Code structure exploration**: for questions about code structure or impact radius, check the code-review-graph MCP first. Do not describe it as a document search engine.
 8. **Review Gate Quiz**: after writing or editing an important guide/ADR/postmortem, and before commit/push/PR, confirm the key decision, the dangerous misreading, and the next action with up to 3 questions.
 9. **Temp snapshot**: after a long workflow, leave a handoff snapshot in `docs/wiki/postmortem/temp/`.

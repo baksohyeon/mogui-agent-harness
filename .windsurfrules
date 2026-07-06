@@ -12,13 +12,22 @@
 
 Automatic memory update: "remember / don't forget / from now on / don't do" triggers an immediate write to Memory.md (protocol = Instructions.md § Memory Update Protocol).
 
+## First-entry autonomous bootstrap
+
+If `.setup-done` is missing, or the project's content files still contain unfilled double-brace template placeholders (for example the Code safety bullets below), setup has not been completed. Run the appropriate flow yourself instead of telling the human to type commands:
+
+- Empty/greenfield target: run `bash scripts/setup.sh`, then fill the remaining placeholders by asking the user (see `PROMPTS.md` #1). `setup.sh` writes `.setup-done` when it completes.
+- Existing project target: from a **separate clone of this starter**, run `bash scripts/ingest.sh <target-repo-path>` (non-destructive; it refuses to run when SOURCE and TARGET resolve to the same directory). Then report the gap report and any `*.starter` conflicts for the human to adjudicate. After merging, run `bash scripts/setup.sh` to finalize `.setup-done` — **unless ingest warned about an existing husky/lefthook chain**, in which case skip `setup.sh` (it rewires `core.hooksPath`) and merge `.githooks/pre-commit` automation into the existing chain by hand (see `PROMPTS.md` #2).
+
+This contract is host-agnostic: Claude Code and Codex must behave identically here, with no Claude-specific tooling assumed. After either flow, still read `.agent/Instructions.md`, `.agent/Context.md`, and `.agent/Memory.md` before answering.
+
 ## Required and recommended tools
 
 | Tool | Verify | Install |
 |------|--------|---------|
 | **code-review-graph** | `code-review-graph status` | `uvx code-review-graph serve` or see the MCP config |
 | **GSD** | `which gsd-tools` | `npx @opengsd/gsd-core@latest` |
-| **gstack** | `test -d ~/.claude/skills/gstack/bin` | `git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup` |
+| **gstack** | `command -v gstack` (or set `GSTACK_HOME`) | `git clone --depth 1 https://github.com/garrytan/gstack.git <host-skills-dir>/gstack && (cd <host-skills-dir>/gstack && ./setup)` |
 | **Superpowers** | check the host plugin manager | install per host |
 
 Workflow definitions live in [`.agent/workflows/triple-crown.md`](./.agent/workflows/triple-crown.md).
