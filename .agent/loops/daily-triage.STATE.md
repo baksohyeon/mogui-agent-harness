@@ -8,7 +8,8 @@ Definition: [`LOOP.md`](./LOOP.md) · Procedure: [`../workflows/daily-triage.md`
 - Each item is **one line**: `- [area] observation → suggested action`
 - Area tags: `commits` · `pr` · `graph` · `memory` · `wiki`
 - Show the **delta** vs the previous run (new / resolved) in its own section
-- L1: this file and `runs/` are the only writes. Nothing else.
+- Items promoted to an L2 proposal are marked `→ PR #N (awaiting gate)`
+- The collect/report stage writes only this file and `runs/`. Any other write goes through the L2 procedure (branch + PR).
 
 ---
 
@@ -24,5 +25,9 @@ _No runs yet. Filled in by the first dry-run._
 (none)
 
 ### Delta (vs previous run)
+
+(none)
+
+### L2 proposals
 
 (none)

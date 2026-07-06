@@ -17,6 +17,8 @@ updated: YYYY-MM-DD
 - `triple-crown.md`: the larger workflow that uses gstack, GSD, and Superpowers together. It scales by size (fast, quick, phase, workstream) and does not force GSD on every task.
 - `automation-patterns.md`: how hooks and automation support agent behavior, by work type.
 - `daily-triage.md`: one run of the read-only L1 triage loop. The loop contract (registry, budgets, kill switch, L1→L3 maturity ladder) lives in [`.agent/loops/LOOP.md`](../loops/LOOP.md).
+- `loop-l2-propose.md`: the shared L2 procedure — a loop turns report items into proposal PRs behind a human gate, with maker/checker split and a 3-attempt cap.
+- `loop-l3-unattended.md`: the shared L3 procedure — unattended runs restricted to an explicit path allowlist, demote-first, never without an L2 track record.
 
 Three procedures also live as invocable skill adapters in `.agents/skills/`, with their canonical content here:
 

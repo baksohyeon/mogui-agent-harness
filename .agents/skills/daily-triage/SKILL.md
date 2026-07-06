@@ -9,4 +9,4 @@ argument-hint: "[--dry-run]"
 
 This skill is a thin adapter. The canonical procedure lives in the `.agent/` SSOT so the system does not depend on this skill directory.
 
-Read and follow [`.agent/workflows/daily-triage.md`](../../../.agent/workflows/daily-triage.md). The loop contract (budget, kill switch, maturity level) is [`.agent/loops/LOOP.md`](../../../.agent/loops/LOOP.md) — respect the L1 read-only invariant: the only writes are the loop state file and one run-log file.
+Read and follow [`.agent/workflows/daily-triage.md`](../../../.agent/workflows/daily-triage.md). The loop contract (budget, kill switch, maturity level) is [`.agent/loops/LOOP.md`](../../../.agent/loops/LOOP.md) — the collect/report stage is read-only: the only writes are the loop state file and one run-log file. If the loop's Maturity is ≥ L2, proposal PRs go through [`.agent/workflows/loop-l2-propose.md`](../../../.agent/workflows/loop-l2-propose.md) only.

@@ -44,11 +44,13 @@ Priority: graph branch-mismatch / CI-lag signals > stale docs > informational.
 
 6. **Check kill switch** — pause criteria in [`LOOP.md`](../loops/LOOP.md) (3 consecutive unresolved / budget exceeded / diff outside state files / graph mismatch). If any fires, stop and escalate with context.
 
+7. **L2 branch (only if the loop's Maturity is ≥ L2)** — pick triage items that fall inside the registry's `L2 propose scope` and run them through [`loop-l2-propose.md`](./loop-l2-propose.md) to open proposal PRs. Out-of-scope or ambiguous items stay report-only.
+
 ## Output contract
 
-- One STATE file updated + one run-log file added. No other repo file changes.
-- Summarize findings to the user. No automatic fixes or commits (this is L1).
+- One STATE file updated + one run-log file added. L2 proposals happen only on separate branches + PRs.
+- Summarize findings to the user. No automatic fixes or commits in the collect/report stage.
 
 ## Promotion
 
-Do not edit this workflow to add write behavior. L2+ (propose + human gate) is a separate procedure, gated by the promotion criteria in `LOOP.md`.
+Do not edit this workflow to add write behavior. L2 (propose + human gate) and L3 (unattended, allowlist) are separate procedures — [`loop-l2-propose.md`](./loop-l2-propose.md) and [`loop-l3-unattended.md`](./loop-l3-unattended.md) — gated by the promotion protocol in `LOOP.md`.
