@@ -79,7 +79,7 @@ if [ "$SOURCE" = "$TARGET" ]; then
   exit 1
 fi
 
-echo "==> agentic-starter ingest"
+echo "==> mogui-agent-harness ingest"
 echo "  SOURCE: $SOURCE"
 echo "  TARGET: $TARGET"
 [ "$DRY_RUN" -eq 1 ] && echo "  MODE:   dry-run (no files will be written)"

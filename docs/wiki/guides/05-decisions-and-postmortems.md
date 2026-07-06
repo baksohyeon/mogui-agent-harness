@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial decision/postmortem guide from agentic-starter."
+    note: "Initial decision/postmortem guide from mogui-agent-harness."
 status: active
 tags: [guide, decisions, postmortem, adr]
 relations:
@@ -45,8 +45,8 @@ status: draft
 collapsed_to: null
 supersedes: []
 decision_area: docs-governance
-decision_subjects: [agentic-starter]
-decision_cluster: agentic-starter
+decision_subjects: [mogui-agent-harness]
+decision_cluster: mogui-agent-harness
 date: YYYY-MM-DD
 deciders: [@git_author]
 context: "<workstream, thread, PR, or incident>"

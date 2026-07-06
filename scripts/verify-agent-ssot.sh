@@ -13,7 +13,7 @@ ok() { echo "  [OK] $1"; }
 warn() { warnings+=("$1"); echo "  [WARN] $1"; }
 fail() { failures+=("$1"); echo "  [FAIL] $1"; }
 
-echo "==> Agent starter SSOT verify"
+echo "==> mogui-agent-harness SSOT verify"
 
 required_files=(
   CLAUDE.md AGENTS.md .cursorrules .windsurfrules
@@ -54,7 +54,17 @@ if [[ -f CLAUDE.md ]]; then
   [[ "${#drift[@]}" -eq 0 ]] && ok "4 host router files are in sync" || fail "host router drift: ${drift[*]}"
 fi
 
-[[ ! -e GEMINI.md ]] && ok "retired Gemini router absent" || fail "GEMINI.md should not exist"
+# GEMINI.md is retired as a synced host router. A thin compatibility shim that
+# defers to AGENTS.md is allowed for hosts that still look for GEMINI.md.
+if [[ -e GEMINI.md ]]; then
+  if grep -q "AGENTS.md" GEMINI.md && [[ "$(wc -l < GEMINI.md | tr -d ' ')" -le 20 ]]; then
+    ok "GEMINI.md is a thin AGENTS.md compatibility shim"
+  else
+    fail "GEMINI.md must stay a thin AGENTS.md shim (<=20 lines); full Gemini router is retired"
+  fi
+else
+  ok "retired Gemini router absent"
+fi
 
 if [[ -f docs/wiki/decisions/D-template.md ]]; then
   for field in "status:" "decision_area:" "decision_subjects:" "decision_cluster:" "collapsed_to:" "supersedes:" "deciders:" "context:" "## Rejected alternatives" "## Reversal conditions" "## Compaction / merge"; do
@@ -176,10 +186,10 @@ fi
 
 if [[ "${#failures[@]}" -gt 0 ]]; then
   echo ""
-  echo "Agent starter verify failed:"
+  echo "mogui-agent-harness verify failed:"
   for f in "${failures[@]}"; do echo "  - $f"; done
   exit 1
 fi
 
 echo ""
-echo "Agent starter verify passed."
+echo "mogui-agent-harness verify passed."

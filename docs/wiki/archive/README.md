@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial archive index from agentic-starter."
+    note: "Initial archive index from mogui-agent-harness."
 status: active
 tags: [archive, wiki]
 relations: []

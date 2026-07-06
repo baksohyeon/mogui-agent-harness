@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial GSD/wiki flow guide from agentic-starter."
+    note: "Initial GSD/wiki flow guide from mogui-agent-harness."
 status: active
 tags: [guide, gsd, llm-wiki, workflow]
 relations:

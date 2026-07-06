@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial onboarding guide from agentic-starter."
+    note: "Initial onboarding guide from mogui-agent-harness."
 status: active
 tags: [guide, onboarding, first-session, agentic-system]
 relations:

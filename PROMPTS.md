@@ -1,8 +1,10 @@
-# agentic-starter prompts
+# mogui-agent-harness prompts
 
-This file collects the runnable prompts you paste into an AI host after copying the starter into a new repo.
+> English document. 한국어: [docs/ko/PROMPTS.md](./docs/ko/PROMPTS.md)
 
-> To preview the conversation that actually happens after you paste, see [`docs/bootstrap-walkthrough.md`](./docs/bootstrap-walkthrough.md) (worked example).
+This file collects the runnable prompts you paste into an AI host after copying the harness into a new repo.
+
+> To preview the conversation that actually happens after you paste, see [`docs/en/bootstrap-walkthrough.md`](./docs/en/bootstrap-walkthrough.md) (worked example).
 
 ## Pick by situation
 
@@ -20,7 +22,7 @@ This file collects the runnable prompts you paste into an AI host after copying 
 **Copy the block below whole and paste it into your AI host.** The AI then reads the files, asks you about the product, team, and stack, and fills the `{{...}}` placeholders. You don't have to edit files by hand before pasting. Put the product name and one-line intro in the first-line parentheses so the AI asks less and fills faster.
 
 ```text
-Apply agentic-starter to this repo. (My project: {{product-name}}, {{one-line-intro}})
+Apply mogui-agent-harness to this repo. (My project: {{product-name}}, {{one-line-intro}})
 
 First read the current host router, then read `.agent/Instructions.md`, `.agent/Context.md`, `.agent/Memory.md` directly. Then replace the `{{...}}` placeholders and `YYYY-MM-DD` based on this company project.
 
@@ -49,7 +51,7 @@ At the end, report the results of `bash scripts/setup.sh`, `bash scripts/verify-
 For adopting it on a repo that already has code and docs piled up. **Overwriting everything with `cp -R .../. .` wipes out your existing `README.md`, `CLAUDE.md`, and `.gitignore`.** Copy conflicting files separately and merge them by hand.
 
 ```text
-Ingest the agentic-starter structure into this existing project. Don't overwrite existing files.
+Ingest the mogui-agent-harness structure into this existing project. Don't overwrite existing files.
 
 Order:
 1. Run `bash scripts/ingest.sh <path-to-this-existing-project>` from the starter repo root (add `--dry-run` first if you want to preview). It resolves SOURCE as the starter repo root itself, copies the skeleton non-destructively, and never overwrites a file that already exists in the target. Anything that already exists and differs (`CLAUDE.md`/`AGENTS.md`/`README.md`/`.gitignore`/`.agent` files/etc.) is written beside the original as `*.starter`.
@@ -105,7 +107,7 @@ Answer using only the files in this repo (no outside knowledge).
 ## Operations check prompt
 
 ```text
-Check the agentic starter wiring.
+Check the mogui-agent-harness wiring.
 
 What to verify:
 - whether the 4 routers have the same content
@@ -120,6 +122,8 @@ What to verify:
 
 Verification commands:
 `bash scripts/verify-agent-ssot.sh`
+`bash scripts/smoke-codex.sh` (Codex parity: .codex adapter files parse and AGENTS.md matches CLAUDE.md)
+`bash scripts/smoke-codex.sh --live` (optional: live Codex behavioral check, only when model/network spend is intended)
 `git diff --check`
 ```
 

@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial maintenance guide from agentic-starter."
+    note: "Initial maintenance guide from mogui-agent-harness."
 status: active
 tags: [guide, maintenance, ssot, stale]
 relations:

@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial host runtime guide from agentic-starter."
+    note: "Initial host runtime guide from mogui-agent-harness."
 status: active
 tags: [guide, runtime, hooks, claude-code, codex, cursor]
 relations:
