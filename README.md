@@ -123,7 +123,8 @@ The deeper docs live in `docs/wiki/guides/`. The section above is the summary; t
 | `.cursor/rules/agentic-router.mdc` `.cursor/mcp.json` | Cursor project rule adapter and code-review-graph MCP config |
 | `.agent/` | Session operating rules, compressed context, learning memory |
 | `.agent/workflows/` | Internal workflows the agent follows repeatedly (`triple-crown.md` 5-phase by scale, `automation-patterns.md` 4 patterns by type) |
-| `.agents/skills/postmortem/` `.agents/skills/scope/` | Evidence-based postmortem skill, work-sizing scope skill. Author = git author. |
+| `.agent/loops/` | Loop-engineering layer: `LOOP.md` loop registry (budgets, kill switch, L1-L3 maturity ladder) plus the `daily-triage` read-only L1 loop (state file + append-only run log) |
+| `.agents/skills/postmortem/` `.agents/skills/scope/` `.agents/skills/daily-triage/` | Evidence-based postmortem skill, work-sizing scope skill, daily-triage loop skill. Author = git author. |
 | `.claude/` | Claude Code hook adapter and the `.claude/commands/scope.md` slash command |
 | `.codex/` | Codex hook/MCP adapter templates |
 | `.githooks/` | Helper hooks for wiki frontmatter and the audit log |

@@ -138,7 +138,8 @@ host router (CLAUDE.md / AGENTS.md / .cursorrules / .windsurfrules)
 | `.cursor/rules/agentic-router.mdc` `.cursor/mcp.json` | Cursor project rule adapter와 code-review-graph MCP 설정 |
 | `.agent/` | 세션 운영 규칙, 압축 컨텍스트, 러닝 메모리 |
 | `.agent/workflows/` | AI가 반복해서 따르는 내부 workflow (`triple-crown.md` 규모별 5 Phase, `automation-patterns.md` 성격별 4 패턴) |
-| `.agents/skills/postmortem/` `.agents/skills/scope/` | 증거 기반 postmortem 작성 skill, 작업 규모 판정 scope skill. 작성자는 git author 기준 |
+| `.agent/loops/` | loop engineering 레이어: `LOOP.md` 루프 레지스트리(예산·kill switch·L1-L3 성숙도 사다리) + `daily-triage` read-only L1 루프(상태 파일 + append-only run log) |
+| `.agents/skills/postmortem/` `.agents/skills/scope/` `.agents/skills/daily-triage/` | 증거 기반 postmortem 작성 skill, 작업 규모 판정 scope skill, daily-triage 루프 skill. 작성자는 git author 기준 |
 | `.claude/` | Claude Code hook adapter와 `.claude/commands/scope.md` 슬래시 커맨드 |
 | `.codex/` | Codex hook/MCP adapter template |
 | `.githooks/` | wiki frontmatter와 audit log 보조 hook |
