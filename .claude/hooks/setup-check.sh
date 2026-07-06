@@ -21,10 +21,13 @@ if [[ "$current_hooks" != ".githooks" && -d ".githooks" ]]; then
 fi
 
 # 2) Notify when .setup-done is missing.
-#    [AGENT-ASK] prefix = an action signal the agent must immediately raise with the user (.agent/Instructions.md § Rules).
+#    The router (CLAUDE.md/AGENTS.md § "First-entry autonomous bootstrap") is the
+#    single source of truth: the agent runs the bootstrap flow ITSELF rather than
+#    asking the human to type commands. This hook only surfaces the signal; it
+#    must not contradict the router by prompting for a yes/no.
 if [[ ! -f ".setup-done" ]]; then
   echo "[setup-check] ./scripts/setup.sh has not run. Some additional setup may be missing."
-  echo "[AGENT-ASK] Claude/Codex: ask the user 'Should I run setup.sh now?', and if yes, run 'bash scripts/setup.sh'."
+  echo "[AGENT-BOOTSTRAP] Claude/Codex: follow the 'First-entry autonomous bootstrap' contract in the router (CLAUDE.md/AGENTS.md) and run the appropriate flow yourself — 'bash scripts/setup.sh' for an empty/greenfield target, or 'bash scripts/ingest.sh <target>' (from a separate starter clone) for an existing project. Do not just tell the human to run it."
 fi
 
 exit 0

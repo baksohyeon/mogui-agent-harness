@@ -100,7 +100,10 @@ for f in "${routers[@]}"; do
   done
 done
 
-for f in .claude/hooks/*.sh .codex/hooks/*.sh; do
+# Syntax-check every shell entrypoint: hook scripts AND the top-level scripts/
+# (ingest.sh, smoke-codex.sh, setup.sh, ...). These are executable entrypoints,
+# so a syntax error should fail the SSOT gate, not surface only at run time.
+for f in .claude/hooks/*.sh .codex/hooks/*.sh scripts/*.sh; do
   [[ -e "$f" ]] || continue
   bash -n "$f" && ok "$f syntax" || fail "$f syntax error"
 done

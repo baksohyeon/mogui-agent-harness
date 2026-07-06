@@ -43,8 +43,8 @@ A promotion is recorded by editing the loop's Maturity row plus a one-line reaso
 
 - New commits on the default branch since the last run (`git log`)
 - Open PRs/MRs targeting the default branch (forge CLI: `gh pr list --base <branch>` or `glab mr list --target-branch <branch>`, read-only)
-- `code-review-graph status` / `detect-changes --brief` (branch-mismatch and change signals; skip if not installed)
-- Stale memory/wiki — reuse `.claude/hooks/memory-health.sh` (>90d) and `.claude/hooks/wiki-health.sh` (>180d)
+- `code-review-graph status` / `code-review-graph detect-changes --brief` (branch-mismatch and change signals; skip if not installed)
+- Stale memory/wiki — reuse `.claude/hooks/memory-health.sh` (>14d) and `.claude/hooks/wiki-health.sh` (>180d)
 
 ### Kill switch / pause criteria
 

@@ -26,7 +26,7 @@ git log --oneline <last-sha>..origin/<default-branch>   # new commits
 git branch --show-current
 code-review-graph status                                 # branch-mismatch warning (skip if not installed)
 code-review-graph detect-changes --brief                 # change signals (skip if not installed)
-bash .claude/hooks/memory-health.sh                      # stale memory (>90d)
+bash .claude/hooks/memory-health.sh                      # stale memory (>14d)
 bash .claude/hooks/wiki-health.sh                        # stale wiki (>180d)
 ```
 
@@ -42,7 +42,7 @@ Priority: graph branch-mismatch / CI-lag signals > stale docs > informational.
 
 5. **Append run log** — one new file `.agent/loops/runs/daily-triage-YYYYMMDD-HHMM.md`: timestamp, scope, item count, spend (tokens / tool calls / wall-clock), pause status.
 
-6. **Check kill switch** — pause criteria in [`LOOP.md`](../loops/LOOP.md) (3 consecutive unresolved / budget exceeded / diff outside state files / graph mismatch). If any fires, stop and escalate with context.
+6. **Check kill switch** — full-stop pause criteria in [`LOOP.md`](../loops/LOOP.md) (3 consecutive unresolved / budget exceeded / diff outside state files). If any fires, stop and escalate with context. A **graph branch-mismatch is not a full stop**: per LOOP.md, treat graph signals as untrusted and skip only the graph-derived items until the graph is rebuilt — the rest of the run continues.
 
 7. **L2 branch (only if the loop's Maturity is ≥ L2)** — pick triage items that fall inside the registry's `L2 propose scope` and run them through [`loop-l2-propose.md`](./loop-l2-propose.md) to open proposal PRs. Out-of-scope or ambiguous items stay report-only.
 

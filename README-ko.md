@@ -24,7 +24,7 @@
 새 repo 루트에서 실행합니다. `setup.sh`는 git repo가 아니면 자동으로 `git init`을 합니다. `git init`을 먼저 하지 않아도 됩니다.
 
 ```bash
-cp -R <source-repo>/. .
+rsync -a --exclude .git <source-repo>/ .
 chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```

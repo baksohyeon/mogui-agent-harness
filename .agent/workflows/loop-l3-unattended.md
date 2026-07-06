@@ -18,7 +18,7 @@ The procedure for an unattended run of a maturity-L3 loop. **A loop cannot enter
 
 ## L3 invariants
 
-- **Writes stay inside the allowlist.** Before committing, diff `git diff --name-only` against the allowlist — a single out-of-allowlist path means abort immediately, escalate, and **demote to L2**.
+- **Writes stay inside the allowlist.** Before committing, enumerate **every** changed path — staged, unstaged, and untracked — with `git status --porcelain` (equivalently `git diff --name-only HEAD` plus `git ls-files --others --exclude-standard`). Plain `git diff --name-only` misses staged and untracked files, so an out-of-allowlist write could slip through an unattended run. A single out-of-allowlist path means abort immediately, escalate, and **demote to L2**.
 - Direct commits to the default branch stay forbidden. Even allowlisted changes go through a branch + PR/MR. Auto-merge only for loops a human explicitly opted in, and only when guards are green.
 - Maker/checker split, attempt caps, and run logs stay identical to L2. Unattended does not mean less verification.
 - **Demote-first principle** — if a judgment call is even slightly ambiguous, do not act; hand it down to the L2 procedure (human gate). L3's default answer is "don't".
@@ -28,7 +28,7 @@ The procedure for an unattended run of a maturity-L3 loop. **A loop cannot enter
 1. Scheduled trigger → L1 collect + triage (reuse [`daily-triage.md`](./daily-triage.md))
 2. Split items: solvable inside the allowlist → step 3. Outside or ambiguous → L2 proposal or report-only.
 3. Implement the minimal diff (maker) → separate checker verifies → run repo guards
-4. Check invariant 1 (`git diff --name-only` vs allowlist) → on pass, commit on a branch and open the PR/MR
+4. Check invariant 1 (`git status --porcelain` — staged + unstaged + untracked — vs allowlist) → on pass, commit on a branch and open the PR/MR
 5. If the loop has auto-merge enabled, merge on green guards; otherwise record as awaiting gate
 6. Update STATE + run log, record measured spend vs budget
 

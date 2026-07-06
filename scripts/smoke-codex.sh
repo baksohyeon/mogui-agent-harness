@@ -23,7 +23,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || { echo "FATAL: could not cd to repo root: $REPO_ROOT" >&2; exit 1; }
 
 failures=()
 
@@ -74,7 +74,10 @@ for m in sorted(set(missing)):
     print(m)
 PY
 )"
-  if [[ "$missing_refs" == JSON_PARSE_ERROR:* ]]; then
+  json_check_exit=$?
+  if [[ "$json_check_exit" -ne 0 ]]; then
+    fail ".codex/hooks.example.json validator crashed (python3 exit $json_check_exit); treating as failed, not passed"
+  elif [[ "$missing_refs" == JSON_PARSE_ERROR:* ]]; then
     fail ".codex/hooks.example.json JSON parse: ${missing_refs#JSON_PARSE_ERROR: }"
   elif [[ -n "$missing_refs" ]]; then
     fail ".codex/hooks.example.json references missing hook script(s): $(echo "$missing_refs" | tr '\n' ' ')"
@@ -138,7 +141,10 @@ for e in errors:
     print(e)
 PY
 )"
-    if [[ -n "$toml_result" ]]; then
+    toml_check_exit=$?
+    if [[ "$toml_check_exit" -ne 0 ]]; then
+      fail ".codex/config.example.toml validator crashed (python3 exit $toml_check_exit); treating as failed, not passed"
+    elif [[ -n "$toml_result" ]]; then
       fail ".codex/config.example.toml light parse found issues: $(echo "$toml_result" | tr '\n' '; ')"
     else
       ok ".codex/config.example.toml light parse (no obvious syntax error)"
@@ -160,6 +166,17 @@ if [[ -f AGENTS.md ]]; then
     ok "AGENTS.md contains the 'First-entry autonomous bootstrap' section"
   else
     fail "AGENTS.md is missing the 'First-entry autonomous bootstrap' section"
+  fi
+  # A section check alone can pass while AGENTS.md has drifted from the other
+  # routers (only verify-agent-ssot.sh checked byte-identity before this).
+  # Cross-check here too so a PASS actually means Codex reads the same
+  # contract as Claude Code, not just a similarly-named section.
+  if [[ -f CLAUDE.md ]]; then
+    if [[ "$(shasum AGENTS.md | awk '{print $1}')" == "$(shasum CLAUDE.md | awk '{print $1}')" ]]; then
+      ok "AGENTS.md is byte-identical to CLAUDE.md (real router parity, not just a matching section)"
+    else
+      fail "AGENTS.md has drifted from CLAUDE.md (not byte-identical) - run scripts/verify-agent-ssot.sh for the full router-sync report"
+    fi
   fi
 else
   fail "AGENTS.md missing"

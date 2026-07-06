@@ -14,10 +14,10 @@ Automatic memory update: "remember / don't forget / from now on / don't do" trig
 
 ## First-entry autonomous bootstrap
 
-If `.setup-done` is missing or `{{...}}` placeholders remain, setup has not been completed. Run the appropriate flow yourself instead of telling the human to type commands:
+If `.setup-done` is missing, or the project's context files still contain unfilled template placeholders, setup has not been completed. (Detect placeholders in the project content — do not treat the example tokens in this contract as unresolved.) Run the appropriate flow yourself instead of telling the human to type commands:
 
-- Empty/greenfield target: run `bash scripts/setup.sh`, then fill the `{{...}}` placeholders by asking the user (see `PROMPTS.md` #1).
-- Existing project target: run `bash scripts/ingest.sh <target>` (non-destructive), then report the gap report and any `*.starter` conflicts for the human to adjudicate (see `PROMPTS.md` #2).
+- Empty/greenfield target: run `bash scripts/setup.sh`, then fill the remaining placeholders by asking the user (see `PROMPTS.md` #1). `setup.sh` writes `.setup-done` when it completes.
+- Existing project target: from a **separate clone of this starter**, run `bash scripts/ingest.sh <target-repo-path>` (non-destructive; it refuses to run when SOURCE and TARGET resolve to the same directory). Then report the gap report and any `*.starter` conflicts for the human to adjudicate, and after merging run `bash scripts/setup.sh` in the target to finalize `.setup-done` (see `PROMPTS.md` #2).
 
 This contract is host-agnostic: Claude Code and Codex must behave identically here, with no Claude-specific tooling assumed. After either flow, still read `.agent/Instructions.md`, `.agent/Context.md`, and `.agent/Memory.md` before answering.
 

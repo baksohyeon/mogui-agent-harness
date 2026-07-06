@@ -176,22 +176,40 @@ target_pre_existed() {
 if command -v rsync >/dev/null 2>&1; then
   echo "==> Copying skeleton (rsync -a --ignore-existing)"
   RSYNC_ARGS=(-a --ignore-existing "${RSYNC_EXCLUDE_ARGS[@]}")
-  [ "$DRY_RUN" -eq 1 ] && RSYNC_ARGS+=(--dry-run)
-  rsync "${RSYNC_ARGS[@]}" "$SOURCE/" "$TARGET/" >/dev/null 2>&1 || true
+  if [ "$DRY_RUN" -eq 1 ]; then
+    # Dry-run writes nothing; itemize quirks between openrsync/GNU rsync are
+    # irrelevant because the report is derived from the snapshot below.
+    RSYNC_ARGS+=(--dry-run)
+    rsync "${RSYNC_ARGS[@]}" "$SOURCE/" "$TARGET/" >/dev/null 2>&1 || true
+  else
+    # A real run must NOT swallow rsync failures: the gap report is derived from
+    # the PRE_EXISTING snapshot, so a partial/failed copy would still be reported
+    # as "added" while those files were never transferred. Abort instead, keeping
+    # the non-destructive contract honest.
+    if ! rsync "${RSYNC_ARGS[@]}" "$SOURCE/" "$TARGET/" >/dev/null 2>&1; then
+      echo "error: rsync failed while copying skeleton; target may be partially populated. Aborting before the gap report to avoid claiming files were added that were not." >&2
+      exit 1
+    fi
+  fi
 else
   echo "==> rsync not found, falling back to cp -Rn"
   # cp -Rn has no dry-run mode; only actually copy when not a dry run.
+  # `"$SOURCE"/*` does not match dotfiles without `shopt -s dotglob`, which
+  # would silently skip the real payload (.agent/, .codex/, .claude/,
+  # .githooks/, .planning/). Enumerate top-level entries with find instead so
+  # dotfiles are included, and skip CONFLICT_PRONE here too (the dedicated
+  # loop below owns those so they are never bulk-copied by this fallback).
   if [ "$DRY_RUN" -eq 0 ]; then
-    for entry in "$SOURCE"/. "$SOURCE"/*; do
+    while IFS= read -r -d '' entry; do
       base="$(basename "$entry")"
       skip=0
       for e in "${EXCLUDES[@]}"; do
         [ "$base" = "$e" ] && skip=1 && break
       done
       [ "$skip" -eq 1 ] && continue
-      [ "$base" = "." ] && continue
+      is_conflict_prone "$base" && continue
       cp -Rn "$entry" "$TARGET/" 2>/dev/null || true
-    done
+    done < <(find "$SOURCE" -mindepth 1 -maxdepth 1 -print0)
   fi
 fi
 
@@ -231,10 +249,14 @@ echo "==> Classifying copied and pre-existing files"
 while IFS= read -r -d '' src_file; do
   rel="${src_file#"$SOURCE"/}"
 
+  # EXCLUDES are passed to rsync as bare (unanchored) --exclude patterns, so
+  # rsync drops them at ANY depth (e.g. docs/.DS_Store), not just at the
+  # transfer root. Match that here with a component-wise check, or a nested
+  # excluded file gets classified as "added" when rsync never copied it.
   skip=0
   for e in "${EXCLUDES[@]}"; do
     case "$rel" in
-      "$e"|"$e"/*) skip=1 ;;
+      "$e"|"$e"/*|*/"$e"|*/"$e"/*) skip=1 ;;
     esac
   done
   [ "$skip" -eq 1 ] && continue
@@ -267,6 +289,15 @@ fi
 if [ -f "$TARGET/package.json" ] && grep -Eq '"(husky|lefthook)"' "$TARGET/package.json" 2>/dev/null; then
   HOOK_WARNING=1
 fi
+# lefthook (and some husky setups) can be wired without a package.json entry, via
+# a standalone config file. Detect those too, or setup.sh's core.hooksPath switch
+# would silently hijack an existing chain the package.json grep never saw.
+for hookcfg in lefthook.yml lefthook.yaml .lefthook.yml .lefthook.yaml lefthook.toml lefthook.json; do
+  if [ -f "$TARGET/$hookcfg" ]; then
+    HOOK_WARNING=1
+    break
+  fi
+done
 if [ "$HOOK_WARNING" -eq 1 ]; then
   echo "  [WARNING] target already uses a hook system (husky/lefthook)."
   echo "            Do NOT run 'git config core.hooksPath .githooks' (setup.sh's"

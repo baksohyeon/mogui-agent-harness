@@ -20,7 +20,7 @@ The flow has **two stages**. The part people get wrong first:
 Run this in the new repo root. `setup.sh` runs `git init` if the directory is not a git repo, so you don't have to `git init` first.
 
 ```bash
-cp -R <source-repo>/. .
+rsync -a --exclude .git <source-repo>/ .
 chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
