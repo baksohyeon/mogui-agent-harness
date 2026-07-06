@@ -118,10 +118,10 @@ else
 fi
 
 # ============================================================================
-# 4/4 Agent starter wiring verify
+# 4/4 Harness wiring verify
 # ============================================================================
 echo ""
-echo "==> 4/4 Agent starter wiring verify"
+echo "==> 4/4 Harness wiring verify"
 if [ -x scripts/verify-agent-ssot.sh ]; then
   scripts/verify-agent-ssot.sh
 else

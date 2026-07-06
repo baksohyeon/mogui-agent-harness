@@ -1,6 +1,6 @@
-# agentic-starter: copy-paste agentic ops boilerplate
+# mogui-agent-harness: copy-paste, vendor-neutral agent ops harness
 
-> English document. 한국어: [README-ko.md](./README-ko.md)
+> English document. 한국어: [docs/ko/README.md](./docs/ko/README.md)
 
 This folder sets up a full agentic operating layer in a new repo: an `.agent` context layer, an LLM wiki, GSD planning scaffolding, Claude/Codex hooks, a Cursor rule adapter, and a code-review-graph MCP convention.
 
@@ -25,11 +25,11 @@ chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
 
-> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `tar --exclude .git -C <source-repo> -cf - . | tar -C . -xf -` — copies everything except the starter's `.git`, so your new repo starts clean without touching any git metadata the target may already have.
+> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `tar --exclude .git -C <source-repo> -cf - . | tar -C . -xf -` — copies everything except the harness's `.git`, so your new repo starts clean without touching any git metadata the target may already have.
 
 `setup.sh` only does git init + git hook install + skeleton verification. This stage does not ask for any product information.
 
-> If `setup.sh`'s "Verify AI tools" step finds gstack, GSD, or code-review-graph missing, it prints a warning. **That is a warning, not a failure.** The starter skeleton works without those tools. Install only the ones you use, via the Install commands in `CLAUDE.md`.
+> If `setup.sh`'s "Verify AI tools" step finds gstack, GSD, or code-review-graph missing, it prints a warning. **That is a warning, not a failure.** The harness skeleton works without those tools. Install only the ones you use, via the Install commands in `CLAUDE.md`.
 
 On a machine that uses Codex, create the local config files. Both are `.gitignore`d.
 
@@ -42,21 +42,21 @@ cp .codex/config.example.toml .codex/config.toml
 
 Copy the **"1. greenfield init"** prompt from `PROMPTS.md` and paste it whole into your current AI host (Claude Code / Codex / Cursor, etc.). The AI then reads the router and the `.agent/` files, **asks you about your product, team, stack, and first decision**, fills the `{{...}}` placeholders, and creates its first decision. You don't pre-edit the blanks by hand.
 
-To preview *what the conversation looks like* after you paste, read `docs/bootstrap-walkthrough.md` (a worked example).
+To preview *what the conversation looks like* after you paste, read [docs/en/bootstrap-walkthrough.md](./docs/en/bootstrap-walkthrough.md) (a worked example).
 
 ### Existing project? Use ingest instead (non-destructive)
 
 The Stage 1 copy above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use `scripts/ingest.sh` instead:
 
 ```bash
-bash <path-to-starter-repo>/scripts/ingest.sh <path-to-your-existing-project>
+bash <path-to-harness-repo>/scripts/ingest.sh <path-to-your-existing-project>
 ```
 
 Add `--dry-run` to preview the gap report without writing anything. Or paste the **"2. ingest into an existing project"** prompt from `PROMPTS.md` and let your AI host run it and walk you through the merge. What it does, and why it is safe:
 
 - **Your git history is untouched.** `ingest.sh` never touches the target's git history, and it never runs `git config core.hooksPath` itself.
 - **Existing files are never overwritten.** Ingest copies the skeleton with `rsync -a --ignore-existing` (or `cp -Rn`), so anything you already have stays as-is and only the missing pieces get added.
-- **A `docs/` name clash is fine.** The starter only contributes `docs/wiki/` and `docs/bootstrap-walkthrough.md`. With `--ignore-existing`, your existing `docs/` files are kept and the starter's `docs/wiki/` is added next to them. If you already have a `docs/wiki/`, the starter copy is placed as `*.starter` beside yours with a diff, so you decide what to merge.
+- **A `docs/` name clash is fine.** The harness only contributes `docs/wiki/`, `docs/en/`, and `docs/ko/`. With `--ignore-existing`, your existing `docs/` files are kept and the harness's directories are added next to them. If you already have a `docs/wiki/`, the harness copy is placed as `*.starter` beside yours with a diff, so you decide what to merge.
 - **Conflicting top-level files** (`CLAUDE.md`, `README.md`, `.gitignore`, `.agent`) are placed as `*.starter` next to yours, never over them. You merge them by hand.
 - **If you already use husky or lefthook**, `ingest.sh` detects it and prints a warning instead of touching hooks. `setup.sh` would otherwise repoint `core.hooksPath` to `.githooks` and hijack your chain, so in that case skip hook installation and merge only `.githooks/pre-commit`'s frontmatter automation into your existing hooks.
 
@@ -132,10 +132,10 @@ The deeper docs live in `docs/wiki/guides/`. The section above is the summary; t
 | `.githooks/` | Helper hooks for wiki frontmatter and the audit log |
 | `.planning/` | GSD execution-state skeleton |
 | `docs/wiki/` | LLM wiki skeleton. Includes decisions/guides/postmortem/schema. |
-| `scripts/` | setup, git hook install, starter wiring verify |
+| `scripts/` | setup, git hook install, harness wiring verify, ingest, Codex parity smoke |
 | `PROMPTS.md` | First-run and ops-check prompts |
-| `docs/bootstrap-walkthrough.md` | A worked example following one session from empty repo to first decision |
-| `README-ko.md` | Korean version of this README |
+| `docs/en/bootstrap-walkthrough.md` | A worked example following one session from empty repo to first decision |
+| `docs/ko/` | Korean versions of this README, `PROMPTS.md`, and the walkthrough |
 
 ## Slots that get filled (usually by the Stage 2 AI)
 
@@ -181,7 +181,10 @@ The greenfield init prompt (`PROMPTS.md`) detects your project's language and co
 bash scripts/setup.sh
 bash scripts/verify-agent-ssot.sh
 bash scripts/wiki-lint.sh
+bash scripts/smoke-codex.sh
 git diff --check
 ```
 
 `wiki-lint.sh` checks `docs/wiki/` integrity (orphans, broken links, duplicate ids, dangling relations, etc.). It only needs python3. If you have a `package.json`, you can add a `"wiki:lint": "bash scripts/wiki-lint.sh"` alias.
+
+`smoke-codex.sh` checks Claude/Codex parity: the `.codex/` adapter files parse, the hook scripts they reference exist, and `AGENTS.md` is byte-identical to `CLAUDE.md`. If the `codex` CLI is installed it also offers a live behavioral check; without it, the static checks still run.

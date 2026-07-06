@@ -1,6 +1,8 @@
 # Bootstrap Walkthrough: from an empty repo to the first decision
 
-This document is a worked example so a first-time starter user can preview *what conversation actually happens*. It's a record of following one session, not a list of commands. If `README.md` covers "what's inside" and `PROMPTS.md` covers "what you paste," this document covers "what happens after you paste."
+> English document. 한국어: [../ko/bootstrap-walkthrough.md](../ko/bootstrap-walkthrough.md)
+
+This document is a worked example so a first-time mogui-agent-harness user can preview *what conversation actually happens*. It's a record of following one session, not a list of commands. If `README.md` covers "what's inside" and `PROMPTS.md` covers "what you paste," this document covers "what happens after you paste."
 
 The example project is fictional: an **internal library-loan management app (working name `booklog`)**, one full-stack developer plus one backend coworker. Assume the stack is TypeScript + Postgres. Substitute your real project as you read.
 
@@ -14,14 +16,15 @@ It's written with three readers in mind.
 
 ## Step 0: copy and setup
 
-From the new project root. `<source>` is the path where you got the starter.
+From the new project root. `<source-repo>` is the path where you got the harness.
 
 ```bash
-cp -R <source>/. .
+rsync -a --exclude .git <source-repo>/ .
+chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
 
-The dot at the end of `starter/.` means "all folder contents including hidden files," and the final `.` means "into the current folder." You need this so hidden folders like `.agent` and `.claude` come along.
+`rsync -a` copies everything including hidden folders like `.agent` and `.claude`, and `--exclude .git` leaves the harness's own git history behind, so your new repo starts with clean git state. (No `rsync`? See the fallback in the README Quick Start.)
 
 The setup output looks roughly like this.
 
@@ -31,12 +34,14 @@ The setup output looks roughly like this.
 ==> 2/4 Multi-host router verify
   [OK] host instruction files in sync
 ==> 3/4 Verify AI tools
-  [OK] gstack / GSD / code-review-graph  (MISSING if absent, not blocking)
-==> 4/4 Agent starter wiring verify
-  Agent starter verify passed.
+  [OK] gstack / GSD / code-review-graph  (CHECK if absent, not blocking)
+==> 4/4 Harness wiring verify
+  mogui-agent-harness verify passed.
 ```
 
-If a tool shows `MISSING`, it doesn't stop. The starter is a skeleton, not a tool installer.
+If a tool shows `CHECK`, it doesn't stop. The harness is a skeleton, not a tool installer.
+
+If you skip `setup.sh` and open an AI session anyway, the SessionStart hook notices the missing `.setup-done` marker and emits an `[AGENT-BOOTSTRAP]` signal — the agent then runs the bootstrap flow itself instead of asking you to type commands.
 
 ---
 
@@ -44,7 +49,7 @@ If a tool shows `MISSING`, it doesn't stop. The starter is a skeleton, not a too
 
 Paste the "1. greenfield init" prompt from `PROMPTS.md` into the current host as is. The core of what it tells the AI:
 
-> Apply agentic-starter to this repo. First read the current host router and `.agent/Instructions.md`, `.agent/Context.md`, `.agent/Memory.md`. Then replace the `{{...}}` placeholders and `YYYY-MM-DD` based on this project. Closed decisions are named `D-YYYYMMDD-<author>-<slug>`; open questions go to `.planning/threads/`. Report the verification command results at the end.
+> Apply mogui-agent-harness to this repo. First read the current host router and `.agent/Instructions.md`, `.agent/Context.md`, `.agent/Memory.md`. Then replace the `{{...}}` placeholders and `YYYY-MM-DD` based on this project. Closed decisions are named `D-YYYYMMDD-<author>-<slug>`; open questions go to `.planning/threads/`. Report the verification command results at the end.
 
 The agent reads first. At this step, a good agent *doesn't replace right away* and instead asks about the blanks it doesn't know.
 
@@ -152,7 +157,7 @@ The next session's agent reads these files and knows, without the person explain
 
 ---
 
-## What the starter guarantees / doesn't
+## What the harness guarantees / doesn't
 
 | Guarantees | Doesn't guarantee |
 |---|---|
@@ -160,4 +165,4 @@ The next session's agent reads these files and knows, without the person explain
 | router-sync and `.agent`-link wiring verification | identical behavior on every host (Cursor needs a direct check in a new chat) |
 | re-runnable setup | installing the tools themselves (gstack/GSD/code-review-graph) |
 
-The starter is a starting point, not a framework. After copying, you have to pass replacement, installation, and verification yourself.
+The harness is a starting point, not a framework. After copying, you have to pass replacement, installation, and verification yourself.

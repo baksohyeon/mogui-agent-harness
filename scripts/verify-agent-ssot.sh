@@ -13,7 +13,7 @@ ok() { echo "  [OK] $1"; }
 warn() { warnings+=("$1"); echo "  [WARN] $1"; }
 fail() { failures+=("$1"); echo "  [FAIL] $1"; }
 
-echo "==> Agent starter SSOT verify"
+echo "==> mogui-agent-harness SSOT verify"
 
 required_files=(
   CLAUDE.md AGENTS.md .cursorrules .windsurfrules
@@ -176,10 +176,10 @@ fi
 
 if [[ "${#failures[@]}" -gt 0 ]]; then
   echo ""
-  echo "Agent starter verify failed:"
+  echo "mogui-agent-harness verify failed:"
   for f in "${failures[@]}"; do echo "  - $f"; done
   exit 1
 fi
 
 echo ""
-echo "Agent starter verify passed."
+echo "mogui-agent-harness verify passed."
