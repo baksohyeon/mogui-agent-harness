@@ -29,7 +29,7 @@ chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
 
-> `rsync`가 필요합니다(macOS·대부분의 Linux에 기본 설치). 없으면: `cp -R <source-repo>/. . && rm -rf ./.git` — 전부 복사한 뒤 starter의 git 상태를 지워 새 repo가 깨끗하게 시작합니다.
+> `rsync`가 필요합니다(macOS·대부분의 Linux에 기본 설치). 없으면: `tar --exclude .git -C <source-repo> -cf - . | tar -C . -xf -` — starter의 `.git`만 빼고 파일을 복사해, 타깃에 이미 있는 git 메타데이터를 건드리지 않고 새 repo가 깨끗하게 시작합니다.
 
 `setup.sh`는 git init, git hook 설치, 골격 검증만 합니다. 이 단계에서는 제품 정보를 묻지 않습니다.
 

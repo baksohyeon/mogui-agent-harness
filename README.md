@@ -25,7 +25,7 @@ chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
 
-> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `cp -R <source-repo>/. . && rm -rf ./.git` — copies everything, then drops the starter's git state so your new repo starts clean.
+> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `tar --exclude .git -C <source-repo> -cf - . | tar -C . -xf -` — copies everything except the starter's `.git`, so your new repo starts clean without touching any git metadata the target may already have.
 
 `setup.sh` only does git init + git hook install + skeleton verification. This stage does not ask for any product information.
 
