@@ -292,7 +292,7 @@ fi
 # lefthook (and some husky setups) can be wired without a package.json entry, via
 # a standalone config file. Detect those too, or setup.sh's core.hooksPath switch
 # would silently hijack an existing chain the package.json grep never saw.
-for hookcfg in lefthook.yml lefthook.yaml .lefthook.yml .lefthook.yaml lefthook.toml lefthook.json; do
+for hookcfg in lefthook.yml lefthook.yaml .lefthook.yml .lefthook.yaml lefthook.toml .lefthook.toml lefthook.json lefthook.jsonc .lefthook.json .lefthook.jsonc; do
   if [ -f "$TARGET/$hookcfg" ]; then
     HOOK_WARNING=1
     break

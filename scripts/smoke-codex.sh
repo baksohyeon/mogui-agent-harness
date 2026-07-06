@@ -171,8 +171,14 @@ if [[ -f AGENTS.md ]]; then
   # routers (only verify-agent-ssot.sh checked byte-identity before this).
   # Cross-check here too so a PASS actually means Codex reads the same
   # contract as Claude Code, not just a similarly-named section.
-  if [[ -f CLAUDE.md ]]; then
-    if [[ "$(shasum AGENTS.md | awk '{print $1}')" == "$(shasum CLAUDE.md | awk '{print $1}')" ]]; then
+  if [[ ! -f CLAUDE.md ]]; then
+    fail "CLAUDE.md missing; cannot verify AGENTS.md router parity"
+  else
+    agents_hash="$(shasum AGENTS.md 2>/dev/null | awk '{print $1}')"
+    claude_hash="$(shasum CLAUDE.md 2>/dev/null | awk '{print $1}')"
+    if [[ -z "$agents_hash" || -z "$claude_hash" ]]; then
+      fail "could not hash AGENTS.md/CLAUDE.md for router parity check"
+    elif [[ "$agents_hash" == "$claude_hash" ]]; then
       ok "AGENTS.md is byte-identical to CLAUDE.md (real router parity, not just a matching section)"
     else
       fail "AGENTS.md has drifted from CLAUDE.md (not byte-identical) - run scripts/verify-agent-ssot.sh for the full router-sync report"

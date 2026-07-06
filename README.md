@@ -25,6 +25,8 @@ chmod +x scripts/*.sh .claude/hooks/*.sh .githooks/* 2>/dev/null || true
 bash scripts/setup.sh
 ```
 
+> Needs `rsync` (preinstalled on macOS and most Linux). Without it: `cp -R <source-repo>/. . && rm -rf ./.git` — copies everything, then drops the starter's git state so your new repo starts clean.
+
 `setup.sh` only does git init + git hook install + skeleton verification. This stage does not ask for any product information.
 
 > If `setup.sh`'s "Verify AI tools" step finds gstack, GSD, or code-review-graph missing, it prints a warning. **That is a warning, not a failure.** The starter skeleton works without those tools. Install only the ones you use, via the Install commands in `CLAUDE.md`.
@@ -44,7 +46,7 @@ To preview *what the conversation looks like* after you paste, read `docs/bootst
 
 ### Existing project? Use ingest instead (non-destructive)
 
-The `cp -R` above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use `scripts/ingest.sh` instead:
+The Stage 1 copy above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use `scripts/ingest.sh` instead:
 
 ```bash
 bash <path-to-starter-repo>/scripts/ingest.sh <path-to-your-existing-project>
@@ -165,7 +167,7 @@ The greenfield init prompt (`PROMPTS.md`) detects your project's language and co
 | hook | default | description |
 |---|---|---|
 | `load-context.sh` | keep | At SessionStart, prints only `.agent/Context.md` and points the agent to read Instructions/Memory directly. |
-| `setup-check.sh` | keep | If `.setup-done` is missing, prompts to run setup via `[AGENT-ASK]`. |
+| `setup-check.sh` | keep | If `.setup-done` is missing, emits `[AGENT-BOOTSTRAP]` so the agent runs the router's autonomous bootstrap flow itself (no yes/no prompt). |
 | `memory-health.sh` | recommended | Warns on the repo-name-based archive path and stale Memory state. |
 | `memory-selfcheck.sh` | recommended | Surfaces load-bearing feedback rules each turn. Placeholder substitution required. |
 | `wiki-health.sh` | recommended | Warns only when an active wiki doc's `last_verified_at` is over 180 days. |

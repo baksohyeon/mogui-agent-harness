@@ -3,15 +3,15 @@ id: guide-host-runtime-and-hooks
 title: "Host Runtime and Hooks"
 type: guide
 created_at: YYYY-MM-DD
-created_by: @git_author
-updated_at: YYYY-MM-DD
-updated_by: @git_author
+created_by: Dorito
+updated_at: 2026-07-06
+updated_by: Dorito
 last_verified_at: YYYY-MM-DD
-last_verified_by: @git_author
+last_verified_by: Dorito
 audit_log:
   - action: created
     at: YYYY-MM-DD
-    by: @git_author
+    by: Dorito
     note: "Initial host runtime guide from agentic-starter."
 status: active
 tags: [guide, runtime, hooks, claude-code, codex, cursor]
@@ -56,7 +56,7 @@ Cursor uses project rules. This starter includes `.cursor/rules/agentic-router.m
 
 ## Hook Output
 
-If a hook prints `[AGENT-ASK]`, treat it as an action trigger. Ask the user, then run the proposed command if approved. Do not ignore it as a normal log line.
+If a hook prints an action-trigger prefix, treat it as an action, not a normal log line. `[AGENT-ASK]`: ask the user, then run the proposed command if approved. `[AGENT-BOOTSTRAP]`: the autonomous case — run the router's First-entry bootstrap flow yourself, no yes/no prompt.
 
 ## Verification
 

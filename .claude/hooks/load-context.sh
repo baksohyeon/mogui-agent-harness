@@ -4,7 +4,7 @@
 # Prints only Context.md to stdout.
 # Instructions.md / Memory.md are read directly by the agent per the router's
 # "always read before answering" rule. Cat-ing all three files makes the hook
-# output large and can bury signals like [AGENT-ASK].
+# output large and can bury signals like [AGENT-ASK] / [AGENT-BOOTSTRAP].
 
 set -e
 
