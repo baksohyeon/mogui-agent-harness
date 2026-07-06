@@ -79,7 +79,7 @@ The agent fills the blanks in `.agent/Context.md` and `CLAUDE.md`. For example, 
 
 `{{product-name}}` becomes `booklog`, `{{stack}}` becomes `TypeScript + Postgres`, and `YYYY-MM-DD` becomes today's date. `@git_author` stays untouched: at commit time, a git hook replaces it with `git config user.name`.
 
-The `{{rules-1-to-4}}` in `.claude/hooks/memory-selfcheck.sh` also get filled. These four lines are a reminder that prompts the agent every turn with "did you check this before responding," so leaving the sample text in place makes them meaningless. Change them to the rules this project breaks most often.
+The `{{rule-1}}` through `{{rule-4}}` placeholders in `.claude/hooks/memory-selfcheck.sh` also get filled. These four lines are a reminder that prompts the agent every turn with "did you check this before responding," so leaving the sample text in place makes them meaningless. Change them to the rules this project breaks most often.
 
 ```text
 - Confirm local apply first when adding a migration
@@ -113,7 +113,7 @@ This goes to `.planning/threads/`, not a decision file. ADRs hold only "closed d
 When you commit the decision file, the pre-commit hook does two things automatically.
 
 ```text
-[bumped] frontmatter `updated_at:` -> 2026-06-22:
+[bumped] frontmatter `updated_at:` -> 2026-06-23:
   - docs/wiki/decisions/D-20260623-dana-postgres-over-sqlite.md
 [substituted] frontmatter `@git_author` -> <git user.name>:
   - docs/wiki/decisions/D-20260623-dana-postgres-over-sqlite.md

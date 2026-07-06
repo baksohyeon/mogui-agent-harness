@@ -79,7 +79,7 @@ setup 출력은 대략 이렇게 나옵니다.
 
 `{{product-name}}`은 `booklog`, `{{stack}}`은 `TypeScript + Postgres`, `YYYY-MM-DD`는 오늘 날짜가 됩니다. `@git_author`는 그대로 둡니다. 커밋 시점에 git hook이 `git config user.name`으로 치환합니다.
 
-`.claude/hooks/memory-selfcheck.sh`의 `{{rules-1-to-4}}`도 채웁니다. 이 네 줄은 매 turn "응답 전에 이걸 확인했나"를 에이전트에게 되묻는 장치라, 샘플 문구를 그대로 두면 의미가 없습니다. 이 프로젝트에서 가장 자주 어기는 규칙으로 바꿉니다.
+`.claude/hooks/memory-selfcheck.sh`의 `{{rule-1}}`부터 `{{rule-4}}`도 채웁니다. 이 네 줄은 매 turn "응답 전에 이걸 확인했나"를 에이전트에게 되묻는 장치라, 샘플 문구를 그대로 두면 의미가 없습니다. 이 프로젝트에서 가장 자주 어기는 규칙으로 바꿉니다.
 
 ```text
 - migration 추가 시 로컬 적용 먼저 확인
@@ -113,7 +113,7 @@ setup 출력은 대략 이렇게 나옵니다.
 결정 파일을 커밋하면 pre-commit hook이 두 가지를 자동으로 처리합니다.
 
 ```text
-[bumped] frontmatter `updated_at:` -> 2026-06-22:
+[bumped] frontmatter `updated_at:` -> 2026-06-23:
   - docs/wiki/decisions/D-20260623-dana-postgres-over-sqlite.md
 [substituted] frontmatter `@git_author` -> <git user.name>:
   - docs/wiki/decisions/D-20260623-dana-postgres-over-sqlite.md

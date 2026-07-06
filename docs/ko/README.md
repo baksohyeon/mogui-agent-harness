@@ -1,6 +1,6 @@
 # mogui-agent-harness: 복사해서 바로 쓰는 벤더중립 에이전트 운영 하네스
 
-> 한국어 문서입니다. English: [/README.md](../../README.md)
+> 한국어 문서입니다. English: [/README.md](../../README.md) (원문이 정본입니다. 두 언어가 어긋나면 영어판을 따릅니다.)
 
 핵심은 하나입니다. **AI는 세션이 끝나면 그 세션에서 정한 것을 잊습니다.** 그래서 규칙과 진행 상황, 결정을 사람 머릿속 대신 repo 파일에 적어 두고, AI가 일을 시작할 때 그 파일부터 읽게 합니다. 교대 근무자에게 남기는 인수인계 노트와 같습니다. 다음 차례(여기서는 다음 AI 세션)가 노트만 보면 이어서 일합니다.
 
@@ -72,7 +72,7 @@ bash <하네스-repo-경로>/scripts/ingest.sh <기존-프로젝트-경로>
 - **git 히스토리는 안 건드립니다.** `ingest.sh`는 대상의 git 히스토리를 건드리지 않고, `git config core.hooksPath`도 직접 실행하지 않습니다.
 - **기존 파일은 절대 안 덮어씁니다.** ingest는 `rsync -a --ignore-existing`(없으면 `cp -Rn`)로 골격을 복사해, 이미 있는 건 그대로 두고 없는 것만 더합니다.
 - **`docs/` 이름이 겹쳐도 괜찮습니다.** 하네스가 더하는 건 `docs/wiki/`·`docs/en/`·`docs/ko/`뿐입니다. `--ignore-existing` 덕에 기존 `docs/` 파일은 유지되고 하네스의 디렉터리만 옆에 더해집니다. 이미 `docs/wiki/`가 있으면 하네스 사본을 `*.starter` 이름으로 옆에 두고 diff를 보여줘, 머지를 직접 정합니다.
-- **충돌하는 최상위 파일**(`CLAUDE.md`·`README.md`·`.gitignore`·`.agent`)은 덮어쓰지 않고 `*.starter` 이름으로 옆에 둡니다. 머지는 손으로 합니다.
+- **충돌하는 최상위 파일과 `.agent/` 디렉터리**(`CLAUDE.md`·`README.md`·`.gitignore`·`.agent/`)는 덮어쓰지 않고 `*.starter` 이름으로 옆에 둡니다. 머지는 손으로 합니다.
 - **husky나 lefthook을 이미 쓴다면** `ingest.sh`가 이를 감지해 경고만 출력하고 hook은 건드리지 않습니다. `setup.sh`는 `core.hooksPath`를 `.githooks`로 바꿔 기존 체인을 가로챌 수 있으므로, 그 경고가 뜨면 hook 설치는 건너뛰고 `.githooks/pre-commit`의 frontmatter 자동화만 기존 hook에 머지합니다.
 
 이미 이 시스템을 쓰는 repo를 클론한 동료는 **"3. coworker 온보딩"**을 씁니다.
@@ -162,7 +162,7 @@ host router (CLAUDE.md / AGENTS.md / .cursorrules / .windsurfrules)
 - `.agent/Memory.md`의 초기 preference/correction
 - `.agent/Context.md`의 제품 범위, 팀원, 기술 스택, 첫 결정
 - `CLAUDE.md`의 코드 안전 규칙, 브랜치 정책, 검증 명령
-- `.claude/hooks/memory-selfcheck.sh`의 `{{rules-1-to-4}}`
+- `.claude/hooks/memory-selfcheck.sh`의 `{{rule-1}}`부터 `{{rule-4}}`
 - Cursor를 쓰면 새 chat에서 `.agent/Instructions.md`, `.agent/Context.md`, `.agent/Memory.md`를 읽었는지 확인합니다.
 
 ## 운영 규칙

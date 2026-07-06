@@ -57,7 +57,7 @@ Add `--dry-run` to preview the gap report without writing anything. Or paste the
 - **Your git history is untouched.** `ingest.sh` never touches the target's git history, and it never runs `git config core.hooksPath` itself.
 - **Existing files are never overwritten.** Ingest copies the skeleton with `rsync -a --ignore-existing` (or `cp -Rn`), so anything you already have stays as-is and only the missing pieces get added.
 - **A `docs/` name clash is fine.** The harness only contributes `docs/wiki/`, `docs/en/`, and `docs/ko/`. With `--ignore-existing`, your existing `docs/` files are kept and the harness's directories are added next to them. If you already have a `docs/wiki/`, the harness copy is placed as `*.starter` beside yours with a diff, so you decide what to merge.
-- **Conflicting top-level files** (`CLAUDE.md`, `README.md`, `.gitignore`, `.agent`) are placed as `*.starter` next to yours, never over them. You merge them by hand.
+- **Conflicting top-level files and the `.agent/` directory** (`CLAUDE.md`, `README.md`, `.gitignore`, `.agent/`) are placed as `*.starter` next to yours, never over them. You merge them by hand.
 - **If you already use husky or lefthook**, `ingest.sh` detects it and prints a warning instead of touching hooks. `setup.sh` would otherwise repoint `core.hooksPath` to `.githooks` and hijack your chain, so in that case skip hook installation and merge only `.githooks/pre-commit`'s frontmatter automation into your existing hooks.
 
 A teammate who cloned a repo that already uses this system uses **"3. coworker onboarding"** instead.
@@ -147,7 +147,7 @@ These are the slots the greenfield prompt asks you about and fills. You can edit
 - Initial preferences/corrections in `.agent/Memory.md`
 - Product scope, team members, tech stack, and first decision in `.agent/Context.md`
 - Code-safety rules, branch policy, and verify commands in `CLAUDE.md`
-- `{{rules-1-to-4}}` in `.claude/hooks/memory-selfcheck.sh`
+- `{{rule-1}}` through `{{rule-4}}` in `.claude/hooks/memory-selfcheck.sh`
 - If you use Cursor, confirm in a new chat that `.agent/Instructions.md`, `.agent/Context.md`, and `.agent/Memory.md` were read.
 
 ## Operating rules
@@ -187,4 +187,4 @@ git diff --check
 
 `wiki-lint.sh` checks `docs/wiki/` integrity (orphans, broken links, duplicate ids, dangling relations, etc.). It only needs python3. If you have a `package.json`, you can add a `"wiki:lint": "bash scripts/wiki-lint.sh"` alias.
 
-`smoke-codex.sh` checks Claude/Codex parity: the `.codex/` adapter files parse, the hook scripts they reference exist, and `AGENTS.md` is byte-identical to `CLAUDE.md`. The default run is static-only. Use `bash scripts/smoke-codex.sh --live` when you explicitly want the live `codex exec` behavioral check.
+`smoke-codex.sh` checks Claude/Codex parity: the `.codex/` adapter files parse, the hook scripts they reference exist, and `AGENTS.md` is byte-identical to `CLAUDE.md`. The default run is static-only. Use `bash scripts/smoke-codex.sh --live` when you explicitly want the live `codex exec` behavioral check; that live smoke is best-effort and never affects the exit code.
