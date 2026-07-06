@@ -166,29 +166,22 @@ target_pre_existed() {
 # ============================================================================
 # Copy step
 # ============================================================================
+# The gap report (added / skipped / *.starter) is computed below from a
+# filesystem comparison against the PRE_EXISTING snapshot, NOT from rsync's
+# --itemize-changes output. openrsync (macOS default) and GNU rsync itemize
+# differently between a --dry-run and a real run, which made --dry-run
+# under-report conflicts. Deriving the report from the snapshot makes dry-run
+# and real report the identical set by construction. rsync/cp here only
+# performs (or, in dry-run, skips) the actual copy.
 if command -v rsync >/dev/null 2>&1; then
   echo "==> Copying skeleton (rsync -a --ignore-existing)"
   RSYNC_ARGS=(-a --ignore-existing "${RSYNC_EXCLUDE_ARGS[@]}")
   [ "$DRY_RUN" -eq 1 ] && RSYNC_ARGS+=(--dry-run)
-  # --itemize-changes so we can classify added files from output. Each line is
-  # "<11-char itemize code> <path>"; only ">f......." lines are new/changed
-  # regular files (skip directory entries "cd+++++++" from the report).
-  while IFS= read -r line; do
-    [ -z "$line" ] && continue
-    code="${line%% *}"
-    rel="${line#* }"
-    case "$code" in
-      '>f'*) record_add "$rel" ;;
-      *) ;;
-    esac
-  done < <(rsync "${RSYNC_ARGS[@]}" --itemize-changes "$SOURCE/" "$TARGET/" || true)
+  rsync "${RSYNC_ARGS[@]}" "$SOURCE/" "$TARGET/" >/dev/null 2>&1 || true
 else
   echo "==> rsync not found, falling back to cp -Rn"
-  # cp -Rn has no dry-run mode; only actually copy when not a dry run. In
-  # dry-run mode without rsync we can only report intent at the top level.
-  if [ "$DRY_RUN" -eq 1 ]; then
-    echo "  [dry-run] would run: cp -Rn $SOURCE/. $TARGET/ (excludes applied by not descending into: ${EXCLUDES[*]})"
-  else
+  # cp -Rn has no dry-run mode; only actually copy when not a dry run.
+  if [ "$DRY_RUN" -eq 0 ]; then
     for entry in "$SOURCE"/. "$SOURCE"/*; do
       base="$(basename "$entry")"
       skip=0
@@ -227,13 +220,14 @@ for rel in "${CONFLICT_PRONE[@]}"; do
 done
 
 # ============================================================================
-# Any file that ALREADY existed in TARGET before this run (rsync
-# --ignore-existing skipped writing over it). This pass makes that conflict
-# visible in the report: identical -> skipped, different -> staged *.starter.
-# Files this run just added are excluded via the PRE_EXISTING snapshot so
-# they are reported once (as added), not double-counted as skipped.
+# Classify every (non-excluded, non-conflict-prone) source file against the
+# PRE_EXISTING snapshot. This is the single source of truth for the report and
+# runs identically in dry-run and real mode:
+#   - did NOT pre-exist  -> added by this run
+#   - pre-existed, same  -> skipped (identical)
+#   - pre-existed, diff   -> staged as *.starter (conflict)
 # ============================================================================
-echo "==> Checking for other pre-existing conflicts"
+echo "==> Classifying copied and pre-existing files"
 while IFS= read -r -d '' src_file; do
   rel="${src_file#"$SOURCE"/}"
 
@@ -246,17 +240,18 @@ while IFS= read -r -d '' src_file; do
   [ "$skip" -eq 1 ] && continue
   is_conflict_prone "$rel" && continue
 
-  # Only files that pre-existed in the target are conflicts here. Anything
-  # rsync just copied this run is already recorded as added.
-  target_pre_existed "$rel" || continue
-
-  dst_file="$TARGET/$rel"
-  [ -f "$dst_file" ] || continue
-
-  if cmp -s "$src_file" "$dst_file"; then
-    record_skip "$rel"
+  if target_pre_existed "$rel"; then
+    dst_file="$TARGET/$rel"
+    [ -f "$dst_file" ] || continue
+    if cmp -s "$src_file" "$dst_file"; then
+      record_skip "$rel"
+    else
+      stage_starter "$rel" "$dst_file.starter"
+    fi
   else
-    stage_starter "$rel" "$dst_file.starter"
+    # Not present before this run -> this run adds it (real: copied above;
+    # dry-run: would be copied). Mode-independent by construction.
+    record_add "$rel"
   fi
 done < <(find "$SOURCE" -type f -print0)
 
