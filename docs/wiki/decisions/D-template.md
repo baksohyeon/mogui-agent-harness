@@ -6,8 +6,8 @@ status: draft
 collapsed_to: null
 supersedes: []
 decision_area: docs-governance
-decision_subjects: [agentic-starter]
-decision_cluster: agentic-starter
+decision_subjects: [mogui-agent-harness]
+decision_cluster: mogui-agent-harness
 date: YYYY-MM-DD
 deciders: [@git_author]
 context: "<which task or discussion produced this decision>"

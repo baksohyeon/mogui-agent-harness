@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "Initial architecture guide from agentic-starter."
+    note: "Initial architecture guide from mogui-agent-harness."
 status: active
 tags: [guide, architecture, agentic-system, llm-wiki]
 relations:

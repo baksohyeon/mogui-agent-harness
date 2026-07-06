@@ -12,7 +12,7 @@ audit_log:
   - action: created
     at: YYYY-MM-DD
     by: @git_author
-    note: "agentic-starter skeleton"
+    note: "mogui-agent-harness skeleton"
 status: active
 tags: [wiki, index]
 relations: []
