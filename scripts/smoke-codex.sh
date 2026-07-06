@@ -11,7 +11,8 @@
 # `codex exec`.
 #
 # Usage:
-#   bash scripts/smoke-codex.sh
+#   bash scripts/smoke-codex.sh          # static checks only
+#   bash scripts/smoke-codex.sh --live   # also run codex exec
 #
 # Exit code is non-zero if any static check fails. The optional live Codex
 # behavioral smoke never affects the exit code: it either runs and reports
@@ -21,6 +22,23 @@
 # Intentionally no -e: this script must continue past a failing check to
 # accumulate failures[] and capture the guarded codex exec exit code.
 set -uo pipefail
+
+RUN_LIVE=0
+case "${1:-}" in
+  "")
+    ;;
+  --live)
+    RUN_LIVE=1
+    ;;
+  -h|--help)
+    sed -n '1,18p' "$0"
+    exit 0
+    ;;
+  *)
+    echo "Usage: bash scripts/smoke-codex.sh [--live]" >&2
+    exit 2
+    ;;
+esac
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || { echo "FATAL: could not cd to repo root: $REPO_ROOT" >&2; exit 1; }
@@ -251,7 +269,10 @@ EOF
 
 LIVE_TIMEOUT_SECS=150
 
-if ! command -v codex >/dev/null 2>&1; then
+if [[ "$RUN_LIVE" != "1" ]]; then
+  echo "  [SKIP] live behavioral smoke is opt-in; rerun with --live to execute codex exec."
+  manual_command
+elif ! command -v codex >/dev/null 2>&1; then
   echo "  [SKIP] codex CLI not installed; live behavioral smoke must be run manually."
   manual_command
 elif ! command -v timeout >/dev/null 2>&1 && ! command -v gtimeout >/dev/null 2>&1; then

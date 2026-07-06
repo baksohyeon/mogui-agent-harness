@@ -123,6 +123,7 @@ What to verify:
 Verification commands:
 `bash scripts/verify-agent-ssot.sh`
 `bash scripts/smoke-codex.sh` (Codex parity: .codex adapter files parse and AGENTS.md matches CLAUDE.md)
+`bash scripts/smoke-codex.sh --live` (optional: live Codex behavioral check, only when model/network spend is intended)
 `git diff --check`
 ```
 

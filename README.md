@@ -187,4 +187,4 @@ git diff --check
 
 `wiki-lint.sh` checks `docs/wiki/` integrity (orphans, broken links, duplicate ids, dangling relations, etc.). It only needs python3. If you have a `package.json`, you can add a `"wiki:lint": "bash scripts/wiki-lint.sh"` alias.
 
-`smoke-codex.sh` checks Claude/Codex parity: the `.codex/` adapter files parse, the hook scripts they reference exist, and `AGENTS.md` is byte-identical to `CLAUDE.md`. If the `codex` CLI is installed it also offers a live behavioral check; without it, the static checks still run.
+`smoke-codex.sh` checks Claude/Codex parity: the `.codex/` adapter files parse, the hook scripts they reference exist, and `AGENTS.md` is byte-identical to `CLAUDE.md`. The default run is static-only. Use `bash scripts/smoke-codex.sh --live` when you explicitly want the live `codex exec` behavioral check.
