@@ -44,6 +44,8 @@ Copy the **"1. greenfield init"** prompt from `PROMPTS.md` and paste it whole in
 
 To preview *what the conversation looks like* after you paste, read [docs/en/bootstrap-walkthrough.md](./docs/en/bootstrap-walkthrough.md) (a worked example).
 
+Running several repos with one resident master agent and worker delegation? Read [docs/en/resident-orchestrator-loop.md](./docs/en/resident-orchestrator-loop.md) — the multi-repo operating layer and its autonomous loop, with research citations.
+
 ### Existing project? Use ingest instead (non-destructive)
 
 The Stage 1 copy above is for an empty repo. On a repo that already has code and docs, do not run it as-is: it overwrites your existing `README.md`, `CLAUDE.md`, and `.gitignore`. Use `scripts/ingest.sh` instead:
