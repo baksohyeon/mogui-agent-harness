@@ -27,51 +27,51 @@
 
 ### 1. 메모리·컨텍스트 지속화와 SSOT
 
-1. 컨텍스트는 무한한 대화 기록이 아니라 유한한 주의력 예산이다. Anthropic은 컨텍스트가 길어질수록 회상이 흔들리는 context rot을 설명하며, 신호가 높은 토큰만 남기고 필요할 때 검색하는 방식을 권한다. [A1]
-2. 장기 작업의 승계에는 컨텍스트 밖 쓰기 경로가 필요하다. 압축(compaction), 구조화된 메모, 멀티에이전트의 컨텍스트 분리는 서로 보완되는 기법이고, 메모리 도구는 세션 사이에 파일을 보존한 뒤 필요한 순간에만 읽게 한다. [A1][A2]
-3. 진입점 파일은 짧게 유지하고 더 깊은 원본으로 안내해야 한다. OpenAI의 하네스 보고서는 짧은 `AGENTS.md`, 구조화된 `docs/` 지식베이스, 색인된 계획, 기계적인 최신성 검사를 함께 사용한다. 반대로 하나의 거대한 지침 파일은 낡고 검증하기 어려워졌다고 기록한다. [A3]
-4. 내구성 있는 실행과 메모리에는 안정적인 커서와 재생 경계가 필요하다. LangGraph는 thread 기준으로 상태를 체크포인트에 저장해 장애 복구, 시간 되돌리기, 사람의 검토를 지원하고, OpenHands는 이력을 읽고 새 이벤트를 내보내는 이벤트 기반 에이전트로 모델링한다. [A4][A5]
-5. 실무적 함의는 영속 규칙·결정, 작업 상태 서사, 세션 핸드오프 서사를 분리하는 것이다. 사실마다 원본 소유자를 하나만 두고 최신성·검증 상태를 기록하며, 같은 규칙을 여러 지침 파일에 복사하지 말고 링크로 연결한다. 마지막 문장은 [A1][A2][A3][A4]에서 도출한 설계 해석이지, 자료들이 이 세 층 구조를 그대로 처방했다는 뜻은 아니다.
+1. 컨텍스트는 무한한 대화 기록이 아니라 유한한 주의력 예산이다. Anthropic은 컨텍스트가 길어질수록 회상이 흔들리는 context rot을 설명하며, 신호가 높은 토큰만 남기고 필요할 때 검색하는 방식을 권한다. `[A1]`
+2. 장기 작업의 승계에는 컨텍스트 밖 쓰기 경로가 필요하다. 압축(compaction), 구조화된 메모, 멀티에이전트의 컨텍스트 분리는 서로 보완되는 기법이고, 메모리 도구는 세션 사이에 파일을 보존한 뒤 필요한 순간에만 읽게 한다. `[A1] [A2]`
+3. 진입점 파일은 짧게 유지하고 더 깊은 원본으로 안내해야 한다. OpenAI의 하네스 보고서는 짧은 `AGENTS.md`, 구조화된 `docs/` 지식베이스, 색인된 계획, 기계적인 최신성 검사를 함께 사용한다. 반대로 하나의 거대한 지침 파일은 낡고 검증하기 어려워졌다고 기록한다. `[A3]`
+4. 내구성 있는 실행과 메모리에는 안정적인 커서와 재생 경계가 필요하다. LangGraph는 thread 기준으로 상태를 체크포인트에 저장해 장애 복구, 시간 되돌리기, 사람의 검토를 지원하고, OpenHands는 이력을 읽고 새 이벤트를 내보내는 이벤트 기반 에이전트로 모델링한다. `[A4] [A5]`
+5. 실무적 함의는 영속 규칙·결정, 작업 상태 서사, 세션 핸드오프 서사를 분리하는 것이다. 사실마다 원본 소유자를 하나만 두고 최신성·검증 상태를 기록하며, 같은 규칙을 여러 지침 파일에 복사하지 말고 링크로 연결한다. 마지막 문장은 `[A1] [A2] [A3] [A4]`에서 도출한 설계 해석이지, 자료들이 이 세 층 구조를 그대로 처방했다는 뜻은 아니다.
 
 ### 2. 멀티에이전트 위임과 검증
 
-1. 필요한 하위 작업을 미리 예측하기 어려울 때는 오케스트레이터-워커가 맞고, 합격 기준이 분명하며 반복 개선의 효과를 측정할 수 있을 때는 평가자-최적화자 구조가 맞다. [B1]
-2. 워커에는 좁은 컨텍스트와 제한된 권한을 줘야 한다. Claude Code는 격리된 서브에이전트 컨텍스트, 도구 허용·차단 목록, 권한 모드, worktree 격리, 부모에게 요약만 돌려주는 사용법을 제공한다. 다만 격리 자체가 검증을 대신하지는 않는다. [B3]
-3. 위임 계약에는 목표, 산출 형식, 사용할 도구·출처, 경계를 넣어야 한다. Anthropic은 모호한 지시 때문에 검색이 중복되고 빈틈이 생겼다고 설명하며, 작업 난이도별 에이전트 수와 도구 호출 수를 정하는 단계를 둔다. [B2]
-4. 중앙 통제와 핸드오프는 서로 다른 제어 방식이다. OpenAI Agents SDK는 최종 답변과 가드레일을 관리자가 계속 소유하는 manager 방식과, 전문 에이전트가 실행을 넘겨받는 handoff 방식을 구분한다. 비용과 순서를 더 예측하려면 코드가 흐름을 소유할 수 있다. [B4]
-5. 멀티에이전트 fan-out에는 비용과 조정 한계가 있다. Anthropic은 자사 리서치 시스템에서 일반 대화 대비 약 15배의 토큰을 사용했다고 보고하며, 간단한 질문에 50개 에이전트를 띄우거나 존재하지 않는 출처를 끝없이 찾는 초기 실패도 공개한다. 따라서 필요한 것은 보편적인 에이전트 수가 아니라 effort 예산과 명시적인 종료 조건이다. [B2]
-6. Gas Town은 역할 분리를 보여 주는 구체적인 오픈소스 사례다. Mayor가 조정하고 Polecat이 실행하며, worktree 기반 hook과 Beads가 작업 상태를 보존한다. 다만 README는 하나의 운영 모델을 설명할 뿐, 독립적인 효과 검증 결과는 아니다. [B5]
+1. 필요한 하위 작업을 미리 예측하기 어려울 때는 오케스트레이터-워커가 맞고, 합격 기준이 분명하며 반복 개선의 효과를 측정할 수 있을 때는 평가자-최적화자 구조가 맞다. `[B1]`
+2. 워커에는 좁은 컨텍스트와 제한된 권한을 줘야 한다. Claude Code는 격리된 서브에이전트 컨텍스트, 도구 허용·차단 목록, 권한 모드, worktree 격리, 부모에게 요약만 돌려주는 사용법을 제공한다. 다만 격리 자체가 검증을 대신하지는 않는다. `[B3]`
+3. 위임 계약에는 목표, 산출 형식, 사용할 도구·출처, 경계를 넣어야 한다. Anthropic은 모호한 지시 때문에 검색이 중복되고 빈틈이 생겼다고 설명하며, 작업 난이도별 에이전트 수와 도구 호출 수를 정하는 단계를 둔다. `[B2]`
+4. 중앙 통제와 핸드오프는 서로 다른 제어 방식이다. OpenAI Agents SDK는 최종 답변과 가드레일을 관리자가 계속 소유하는 manager 방식과, 전문 에이전트가 실행을 넘겨받는 handoff 방식을 구분한다. 비용과 순서를 더 예측하려면 코드가 흐름을 소유할 수 있다. `[B4]`
+5. 멀티에이전트 fan-out에는 비용과 조정 한계가 있다. Anthropic은 자사 리서치 시스템에서 일반 대화 대비 약 15배의 토큰을 사용했다고 보고하며, 간단한 질문에 50개 에이전트를 띄우거나 존재하지 않는 출처를 끝없이 찾는 초기 실패도 공개한다. 따라서 필요한 것은 보편적인 에이전트 수가 아니라 effort 예산과 명시적인 종료 조건이다. `[B2]`
+6. Gas Town은 역할 분리를 보여 주는 구체적인 오픈소스 사례다. Mayor가 조정하고 Polecat이 실행하며, worktree 기반 hook과 Beads가 작업 상태를 보존한다. 다만 README는 하나의 운영 모델을 설명할 뿐, 독립적인 효과 검증 결과는 아니다. `[B5]`
 
 ### 3. 자율 운영 루프
 
-1. 신뢰할 수 있는 루프에는 명시적인 생명주기 이벤트와 관찰 가능한 상태 전이가 있어야 한다. Claude Code hooks는 세션, 도구, 서브에이전트, 알림, 중지, 압축, 파일·설정 변경 이벤트를 노출하며, 모델이 실행 여부를 판단하는 지침이 아니라 결정론적 제어 장치로 동작한다. [C1]
-2. 이벤트 로그는 감시와 재개를 위한 기반이 된다. OpenHands는 추가만 가능한 타입 이벤트 이력, 원자적으로 중단 가능한 step, 컨텍스트 압축, 실행 전 보안 분석을 설명한다. [C2]
-3. 안전한 일시정지는 프롬프트 속 예외 처리가 아니라 일급 상태여야 한다. LangGraph는 interrupt 전에 그래프 상태를 저장하고 외부 입력을 기다린 뒤 같은 thread ID로 재개한다. 파괴적이거나 모호한 작업에 사람 게이트를 두는 직접적인 패턴이다. [C3]
-4. 모델·도구 루프에는 명령 시간 제한과 계획 갱신처럼 실행을 통제할 수 있는 인터페이스가 있어야 한다. OpenAI의 Codex 루프 설명은 `timeout_ms`가 있는 shell 도구와 일급 plan 도구를 보여 준다. 시간 예산을 강제해야 한다는 문장은 이 구현에서 도출한 설계 해석이다. [C4]
-5. 하트비트와 작업 완료는 서로 다른 신호다. Gas Town은 Deacon에 상시 모니터링 역할을, Witness에 워커 상태 확인·재촉·정리 역할을 둔다. 따라서 상주 루프는 생존 신호, 작업 진행, 최종 결과를 별도로 기록해야 한다. [C5]
-6. 동반 문서의 자기 조절 간격과 연속 세 번 실패 기준은 `[OBS]`로 표시한 운영 선택이다. 외부 자료는 이벤트 제어, 체크포인트, 예산, 사람 interrupt를 뒷받침하지만 이 숫자 자체를 검증하지는 않는다. [C1][C2][C3][C4][C5]
+1. 신뢰할 수 있는 루프에는 명시적인 생명주기 이벤트와 관찰 가능한 상태 전이가 있어야 한다. Claude Code hooks는 세션, 도구, 서브에이전트, 알림, 중지, 압축, 파일·설정 변경 이벤트를 노출하며, 모델이 실행 여부를 판단하는 지침이 아니라 결정론적 제어 장치로 동작한다. `[C1]`
+2. 이벤트 로그는 감시와 재개를 위한 기반이 된다. OpenHands는 추가만 가능한 타입 이벤트 이력, 원자적으로 중단 가능한 step, 컨텍스트 압축, 실행 전 보안 분석을 설명한다. `[C2]`
+3. 안전한 일시정지는 프롬프트 속 예외 처리가 아니라 일급 상태여야 한다. LangGraph는 interrupt 전에 그래프 상태를 저장하고 외부 입력을 기다린 뒤 같은 thread ID로 재개한다. 파괴적이거나 모호한 작업에 사람 게이트를 두는 직접적인 패턴이다. `[C3]`
+4. 모델·도구 루프에는 명령 시간 제한과 계획 갱신처럼 실행을 통제할 수 있는 인터페이스가 있어야 한다. OpenAI의 Codex 루프 설명은 `timeout_ms`가 있는 shell 도구와 일급 plan 도구를 보여 준다. 시간 예산을 강제해야 한다는 문장은 이 구현에서 도출한 설계 해석이다. `[C4]`
+5. 하트비트와 작업 완료는 서로 다른 신호다. Gas Town은 Deacon에 상시 모니터링 역할을, Witness에 워커 상태 확인·재촉·정리 역할을 둔다. 따라서 상주 루프는 생존 신호, 작업 진행, 최종 결과를 별도로 기록해야 한다. `[C5]`
+6. 동반 문서의 자기 조절 간격과 연속 세 번 실패 기준은 `[OBS]`로 표시한 운영 선택이다. 외부 자료는 이벤트 제어, 체크포인트, 예산, 사람 interrupt를 뒷받침하지만 이 숫자 자체를 검증하지는 않는다. `[C1] [C2] [C3] [C4] [C5]`
 
 ### 4. 구현과 실패 사례
 
-1. Codex의 공개 하네스 보고서는 레포지토리 안의 지식을 시스템 오브 레코드로 두고, 짧은 라우팅 파일과 기계적 아키텍처 검사를 사용하며, 리뷰·버그 피드백을 문서와 도구로 되돌린다. 장시간 실행과 관측성 피드백 루프도 함께 기록한다. 이는 공개된 구현 경험이지 다른 하네스와의 통제 실험 결과는 아니다. [A3]
-2. Claude Code는 상주 하네스에 필요한 제어 지점을 구체적으로 제공한다: 격리된 서브에이전트, 독립 권한, 선택적 worktree 격리, 생명주기 hooks, 도구 실행 전·중지 제어. 다만 문서는 기능과 설정을 설명할 뿐, 어떤 배포 환경도 자동으로 안전하다고 보장하지 않는다. [B3][C1]
-3. OpenHands는 에이전트 추론, 이벤트 이력, 도구, workspace/runtime, 보안 분석, 원격 서버를 분리한다. 공개 논문은 샌드박스형 소프트웨어 엔지니어링 에이전트 플랫폼을 제시하고, 현재 SDK 문서는 더 명시적인 무상태·이벤트 기반 설계를 보여 준다. [A5][C2][D1]
-4. SWE-agent는 agent-computer interface 자체가 하네스 설계 변수임을 보였다. 튜닝한 명령, 파일 보기·편집, 레포지토리 검색, 테스트 실행이 벤치마크 결과에 영향을 줬다. 이 결과는 도구 계약과 피드백 형식에 투자할 근거이지, 하나의 ACI가 모든 코딩 작업에 일반화된다는 증거는 아니다. [D2]
-5. Devin의 공개 문서는 코드를 작성·실행·테스트·리뷰하는 자율 에이전트로 설명하면서, 명시적인 완료 기준과 검증 가능한 결과를 요구하고, 어려운 작업은 더 작고 격리된 세션으로 나누라고 권한다. 릴리스 노트에는 충돌·멈춤·행 걸림 세션을 고친 기록도 있다. 자율성은 무제한 위임이 아니라 범위 설정과 검증을 전제로 한다. [D3][D4]
-6. Gas Town/Beads는 영속적인 에이전트 정체성, 역할별 모니터, worktree 기반 상태, 의존성 인식 작업 추적이라는 오픈소스 방향을 보여 준다. 동시에 역할과 상태 저장소가 늘면 조정 지점도 늘어나므로, 오케스트레이터에는 소유권·생존·정리 규칙이 필요하다. 뒤 문장은 공개 아키텍처에서 도출한 해석이다. [B5][C5]
+1. Codex의 공개 하네스 보고서는 레포지토리 안의 지식을 시스템 오브 레코드로 두고, 짧은 라우팅 파일과 기계적 아키텍처 검사를 사용하며, 리뷰·버그 피드백을 문서와 도구로 되돌린다. 장시간 실행과 관측성 피드백 루프도 함께 기록한다. 이는 공개된 구현 경험이지 다른 하네스와의 통제 실험 결과는 아니다. `[A3]`
+2. Claude Code는 상주 하네스에 필요한 제어 지점을 구체적으로 제공한다: 격리된 서브에이전트, 독립 권한, 선택적 worktree 격리, 생명주기 hooks, 도구 실행 전·중지 제어. 다만 문서는 기능과 설정을 설명할 뿐, 어떤 배포 환경도 자동으로 안전하다고 보장하지 않는다. `[B3] [C1]`
+3. OpenHands는 에이전트 추론, 이벤트 이력, 도구, workspace/runtime, 보안 분석, 원격 서버를 분리한다. 공개 논문은 샌드박스형 소프트웨어 엔지니어링 에이전트 플랫폼을 제시하고, 현재 SDK 문서는 더 명시적인 무상태·이벤트 기반 설계를 보여 준다. `[A5] [C2] [D1]`
+4. SWE-agent는 agent-computer interface 자체가 하네스 설계 변수임을 보였다. 튜닝한 명령, 파일 보기·편집, 레포지토리 검색, 테스트 실행이 벤치마크 결과에 영향을 줬다. 이 결과는 도구 계약과 피드백 형식에 투자할 근거이지, 하나의 ACI가 모든 코딩 작업에 일반화된다는 증거는 아니다. `[D2]`
+5. Devin의 공개 문서는 코드를 작성·실행·테스트·리뷰하는 자율 에이전트로 설명하면서, 명시적인 완료 기준과 검증 가능한 결과를 요구하고, 어려운 작업은 더 작고 격리된 세션으로 나누라고 권한다. 릴리스 노트에는 충돌·멈춤·행 걸림 세션을 고친 기록도 있다. 자율성은 무제한 위임이 아니라 범위 설정과 검증을 전제로 한다. `[D3] [D4]`
+6. Gas Town/Beads는 영속적인 에이전트 정체성, 역할별 모니터, worktree 기반 상태, 의존성 인식 작업 추적이라는 오픈소스 방향을 보여 준다. 동시에 역할과 상태 저장소가 늘면 조정 지점도 늘어나므로, 오케스트레이터에는 소유권·생존·정리 규칙이 필요하다. 뒤 문장은 공개 아키텍처에서 도출한 해석이다. `[B5] [C5]`
 
 ## 상주 하네스를 위한 설계 종합
 
 | 규칙 | 근거와 의미 |
 |---|---|
-| 진입점은 짧게 만들고 더 깊은 원본으로 안내한다 | 긴 프롬프트는 작업 컨텍스트를 밀어내며, 구조화·색인된 레포지토리 지식은 점검과 갱신이 쉽다. [A1][A3] |
-| 활성 컨텍스트 밖에 사실을 저장한다 | 메모리 파일, 체크포인트, 이벤트 이력은 승계·재생·복구를 가능하게 한다. [A2][A4][A5][C2] |
-| 상태 종류마다 소유자를 하나만 둔다 | 지침을 여러 파일에 복제하면 stale 충돌이 생긴다. 이는 문서 드리프트와 컨텍스트 관리 실패에서 도출한 해석이다. [A3] |
-| 독립적으로 유용하고 범위가 분명한 일만 위임한다 | 오케스트레이터-워커와 manager-as-tool은 종합 책임을 유지하고, 깨끗한 컨텍스트는 잡음을 줄인다. [B1][B2][B3][B4] |
-| 검증 기준을 명시한다 | 평가 루프, 도구 피드백, 테스트, 사람 게이트에는 관찰 가능한 통과·실패 기준이 필요하다. [B1][B2][C3] |
-| 생존·진행·완료를 서로 다른 신호로 다룬다 | hooks, 이벤트 이력, 하트비트, patrol 역할은 서로 다른 생명주기 사실을 보여 준다. [C1][C2][C5] |
-| 런타임에 예산과 중지 상태를 둔다 | 멀티에이전트 비용은 빠르게 늘어나므로 시간 제한, interrupt, 체크포인트, effort 단계가 열린 루프를 막는다. [B2][C3][C4] |
-| 관측성과 롤백을 확보한 뒤 자율성을 높인다 | 공개 구현은 샌드박스, 보안 검사, 리뷰 루프, 범위가 제한된 세션과 함께 자율 실행을 제공한다. [A3][A5][C2][D3] |
+| 진입점은 짧게 만들고 더 깊은 원본으로 안내한다 | 긴 프롬프트는 작업 컨텍스트를 밀어내며, 구조화·색인된 레포지토리 지식은 점검과 갱신이 쉽다. `[A1] [A3]` |
+| 활성 컨텍스트 밖에 사실을 저장한다 | 메모리 파일, 체크포인트, 이벤트 이력은 승계·재생·복구를 가능하게 한다. `[A2] [A4] [A5] [C2]` |
+| 상태 종류마다 소유자를 하나만 둔다 | 지침을 여러 파일에 복제하면 stale 충돌이 생긴다. 이는 문서 드리프트와 컨텍스트 관리 실패에서 도출한 해석이다. `[A3]` |
+| 독립적으로 유용하고 범위가 분명한 일만 위임한다 | 오케스트레이터-워커와 manager-as-tool은 종합 책임을 유지하고, 깨끗한 컨텍스트는 잡음을 줄인다. `[B1] [B2] [B3] [B4]` |
+| 검증 기준을 명시한다 | 평가 루프, 도구 피드백, 테스트, 사람 게이트에는 관찰 가능한 통과·실패 기준이 필요하다. `[B1] [B2] [C3]` |
+| 생존·진행·완료를 서로 다른 신호로 다룬다 | hooks, 이벤트 이력, 하트비트, patrol 역할은 서로 다른 생명주기 사실을 보여 준다. `[C1] [C2] [C5]` |
+| 런타임에 예산과 중지 상태를 둔다 | 멀티에이전트 비용은 빠르게 늘어나므로 시간 제한, interrupt, 체크포인트, effort 단계가 열린 루프를 막는다. `[B2] [C3] [C4]` |
+| 관측성과 롤백을 확보한 뒤 자율성을 높인다 | 공개 구현은 샌드박스, 보안 검사, 리뷰 루프, 범위가 제한된 세션과 함께 자율 실행을 제공한다. `[A3] [A5] [C2] [D3]` |
 
 ## 출처 목록
 
@@ -79,7 +79,7 @@
 
 ### 1축 출처
 
-#### [A1] Anthropic — Effective context engineering for AI agents
+#### `[A1]` Anthropic — Effective context engineering for AI agents
 
 URL: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
 
@@ -89,7 +89,7 @@ URL: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-
 
 접속 확인: 2026-07-15.
 
-#### [A2] Anthropic — Memory tool
+#### `[A2]` Anthropic — Memory tool
 
 URL: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
 
@@ -99,7 +99,7 @@ URL: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
 
 접속 확인: 2026-07-15.
 
-#### [A3] OpenAI — Harness engineering: leveraging Codex in an agent-first world
+#### `[A3]` OpenAI — Harness engineering: leveraging Codex in an agent-first world
 
 URL: https://openai.com/index/harness-engineering/
 
@@ -109,7 +109,7 @@ URL: https://openai.com/index/harness-engineering/
 
 접속 확인: 2026-07-15.
 
-#### [A4] LangChain — LangGraph persistence
+#### `[A4]` LangChain — LangGraph persistence
 
 URL: https://docs.langchain.com/oss/python/langgraph/persistence
 
@@ -119,7 +119,7 @@ URL: https://docs.langchain.com/oss/python/langgraph/persistence
 
 접속 확인: 2026-07-15.
 
-#### [A5] OpenHands — Agent architecture
+#### `[A5]` OpenHands — Agent architecture
 
 URL: https://docs.openhands.dev/sdk/arch/agent
 
@@ -131,7 +131,7 @@ URL: https://docs.openhands.dev/sdk/arch/agent
 
 ### 2축 출처
 
-#### [B1] Anthropic — Building effective AI agents
+#### `[B1]` Anthropic — Building effective AI agents
 
 URL: https://www.anthropic.com/engineering/building-effective-agents
 
@@ -141,7 +141,7 @@ URL: https://www.anthropic.com/engineering/building-effective-agents
 
 접속 확인: 2026-07-15.
 
-#### [B2] Anthropic — How we built our multi-agent research system
+#### `[B2]` Anthropic — How we built our multi-agent research system
 
 URL: https://www.anthropic.com/engineering/multi-agent-research-system
 
@@ -151,7 +151,7 @@ URL: https://www.anthropic.com/engineering/multi-agent-research-system
 
 접속 확인: 2026-07-15.
 
-#### [B3] Claude Code — Create custom subagents
+#### `[B3]` Claude Code — Create custom subagents
 
 URL: https://code.claude.com/docs/en/sub-agents
 
@@ -161,7 +161,7 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 접속 확인: 2026-07-15.
 
-#### [B4] OpenAI Agents SDK — Agent orchestration
+#### `[B4]` OpenAI Agents SDK — Agent orchestration
 
 URL: https://openai.github.io/openai-agents-python/multi_agent/
 
@@ -171,7 +171,7 @@ URL: https://openai.github.io/openai-agents-python/multi_agent/
 
 접속 확인: 2026-07-15.
 
-#### [B5] Gas Town — multi-agent workspace manager
+#### `[B5]` Gas Town — multi-agent workspace manager
 
 URL: https://github.com/gastownhall/gastown
 
@@ -183,7 +183,7 @@ URL: https://github.com/gastownhall/gastown
 
 ### 3축 출처
 
-#### [C1] Claude Code — Automate actions with hooks
+#### `[C1]` Claude Code — Automate actions with hooks
 
 URL: https://code.claude.com/docs/en/hooks-guide
 
@@ -193,7 +193,7 @@ URL: https://code.claude.com/docs/en/hooks-guide
 
 접속 확인: 2026-07-15.
 
-#### [C2] OpenHands — Events architecture
+#### `[C2]` OpenHands — Events architecture
 
 URL: https://docs.openhands.dev/sdk/arch/events
 
@@ -203,7 +203,7 @@ URL: https://docs.openhands.dev/sdk/arch/events
 
 접속 확인: 2026-07-15.
 
-#### [C3] LangChain — LangGraph interrupts
+#### `[C3]` LangChain — LangGraph interrupts
 
 URL: https://docs.langchain.com/oss/python/langgraph/interrupts
 
@@ -213,7 +213,7 @@ URL: https://docs.langchain.com/oss/python/langgraph/interrupts
 
 접속 확인: 2026-07-15.
 
-#### [C4] OpenAI — Unrolling the Codex agent loop
+#### `[C4]` OpenAI — Unrolling the Codex agent loop
 
 URL: https://openai.com/index/unrolling-the-codex-agent-loop/
 
@@ -223,7 +223,7 @@ URL: https://openai.com/index/unrolling-the-codex-agent-loop/
 
 접속 확인: 2026-07-15.
 
-#### [C5] Gas Town — Architecture
+#### `[C5]` Gas Town — Architecture
 
 URL: https://docs.gastownhall.ai/design/architecture/
 
@@ -235,7 +235,7 @@ URL: https://docs.gastownhall.ai/design/architecture/
 
 ### 4축 출처
 
-#### [D1] OpenHands — An Open Platform for AI Software Developers as Generalist Agents
+#### `[D1]` OpenHands — An Open Platform for AI Software Developers as Generalist Agents
 
 URL: https://arxiv.org/abs/2407.16741
 
@@ -245,7 +245,7 @@ URL: https://arxiv.org/abs/2407.16741
 
 접속 확인: 2026-07-15.
 
-#### [D2] SWE-agent — Agent-Computer Interfaces Enable Automated Software Engineering
+#### `[D2]` SWE-agent — Agent-Computer Interfaces Enable Automated Software Engineering
 
 URL: https://arxiv.org/abs/2405.15793
 
@@ -255,7 +255,7 @@ URL: https://arxiv.org/abs/2405.15793
 
 접속 확인: 2026-07-15.
 
-#### [D3] Devin — Introducing Devin
+#### `[D3]` Devin — Introducing Devin
 
 URL: https://docs.devin.ai/get-started/devin-intro
 
@@ -265,7 +265,7 @@ URL: https://docs.devin.ai/get-started/devin-intro
 
 접속 확인: 2026-07-15.
 
-#### [D4] Devin — 2024 release notes
+#### `[D4]` Devin — 2024 release notes
 
 URL: https://docs.devin.ai/release-notes/2024
 

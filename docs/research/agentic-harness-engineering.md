@@ -29,38 +29,38 @@ The accepted corpus contains 19 sources. Three candidate classes were discarded:
 
 ### 1. Memory, context persistence, and SSOT
 
-1. Context is a finite attention budget, not an unlimited transcript. Anthropic describes context rot and recommends curating the smallest high-signal set of tokens; just-in-time retrieval and progressive disclosure keep working context focused. [A1]
-2. Long-horizon continuity needs an external write path. Compaction, structured note-taking, and multi-agent context separation are complementary techniques; a memory tool can persist files across conversations and retrieve them only when needed. [A1][A2]
-3. A short entry-point file should route to deeper, versioned sources of truth. OpenAI’s harness report describes a short `AGENTS.md`, a structured `docs/` knowledge base, indexed plans, and mechanical freshness checks; it also records that a monolithic instruction file became stale and hard to verify. [A3]
-4. Durable execution and memory need a stable cursor and replay boundary. LangGraph checkpoints state by thread and supports fault-tolerant resume, time travel, and human inspection; OpenHands models the agent as an event-driven component that reads history and emits new events. [A4][A5]
-5. Practical implication: separate durable rules and decisions, task-state narrative, and session handoff narrative. Keep one authoritative owner for each fact, record freshness or verification status, and use links rather than copying the same rule into several instruction files. The last sentence is an engineering inference from [A1][A2][A3][A4], not a claim that the sources prescribe this exact three-layer layout.
+1. Context is a finite attention budget, not an unlimited transcript. Anthropic describes context rot and recommends curating the smallest high-signal set of tokens; just-in-time retrieval and progressive disclosure keep working context focused. `[A1]`
+2. Long-horizon continuity needs an external write path. Compaction, structured note-taking, and multi-agent context separation are complementary techniques; a memory tool can persist files across conversations and retrieve them only when needed. `[A1] [A2]`
+3. A short entry-point file should route to deeper, versioned sources of truth. OpenAI’s harness report describes a short `AGENTS.md`, a structured `docs/` knowledge base, indexed plans, and mechanical freshness checks; it also records that a monolithic instruction file became stale and hard to verify. `[A3]`
+4. Durable execution and memory need a stable cursor and replay boundary. LangGraph checkpoints state by thread and supports fault-tolerant resume, time travel, and human inspection; OpenHands models the agent as an event-driven component that reads history and emits new events. `[A4] [A5]`
+5. Practical implication: separate durable rules and decisions, task-state narrative, and session handoff narrative. Keep one authoritative owner for each fact, record freshness or verification status, and use links rather than copying the same rule into several instruction files. The last sentence is an engineering inference from `[A1] [A2] [A3] [A4]`, not a claim that the sources prescribe this exact three-layer layout.
 
 ### 2. Multi-agent delegation and verification
 
-1. Orchestrator-worker is useful when subtasks are not predictable in advance; evaluator-optimizer is useful when acceptance criteria are explicit and iterative improvement is measurable. [B1]
-2. Workers should have focused contexts and bounded permissions. Claude Code documents isolated subagent context windows, custom tool access, permission modes, worktree isolation, and concise summaries returned to the parent; this reduces context pollution but does not remove the need for verification. [B3]
-3. Delegation contracts need an objective, output format, tool/source guidance, and boundaries. Anthropic reports that vague instructions led to duplicate searches and gaps, while explicit effort tiers controlled how many agents and tool calls were used. [B2]
-4. Central ownership and handoff are different control shapes. OpenAI’s Agents SDK distinguishes a manager that keeps the final answer and guardrails from a handoff in which a specialist becomes the active agent; code-driven orchestration is more deterministic for cost and sequence control. [B4]
-5. Multi-agent fan-out has a real cost and coordination limit. Anthropic reports roughly 15x the token use of chat for its multi-agent research system, and documents early failures such as spawning 50 agents for a simple query or searching endlessly for nonexistent sources. This supports effort budgets and explicit stop criteria, not a universal agent-count recommendation. [B2]
-6. Gas Town is a concrete OSS example of role separation: a Mayor coordinates, Polecats execute, and persistent work state is carried through hooks and Beads. Its architecture demonstrates one viable operating model; its README is not an independent efficacy evaluation. [B5]
+1. Orchestrator-worker is useful when subtasks are not predictable in advance; evaluator-optimizer is useful when acceptance criteria are explicit and iterative improvement is measurable. `[B1]`
+2. Workers should have focused contexts and bounded permissions. Claude Code documents isolated subagent context windows, custom tool access, permission modes, worktree isolation, and concise summaries returned to the parent; this reduces context pollution but does not remove the need for verification. `[B3]`
+3. Delegation contracts need an objective, output format, tool/source guidance, and boundaries. Anthropic reports that vague instructions led to duplicate searches and gaps, while explicit effort tiers controlled how many agents and tool calls were used. `[B2]`
+4. Central ownership and handoff are different control shapes. OpenAI’s Agents SDK distinguishes a manager that keeps the final answer and guardrails from a handoff in which a specialist becomes the active agent; code-driven orchestration is more deterministic for cost and sequence control. `[B4]`
+5. Multi-agent fan-out has a real cost and coordination limit. Anthropic reports roughly 15x the token use of chat for its multi-agent research system, and documents early failures such as spawning 50 agents for a simple query or searching endlessly for nonexistent sources. This supports effort budgets and explicit stop criteria, not a universal agent-count recommendation. `[B2]`
+6. Gas Town is a concrete OSS example of role separation: a Mayor coordinates, Polecats execute, and persistent work state is carried through hooks and Beads. Its architecture demonstrates one viable operating model; its README is not an independent efficacy evaluation. `[B5]`
 
 ### 3. Autonomous operating loops
 
-1. A reliable loop has explicit lifecycle events and observable state transitions. Claude Code hooks expose session, tool, subagent, notification, stop, compaction, and file/configuration events; hooks are deterministic controls rather than instructions the model may or may not follow. [C1]
-2. Event logs provide a useful substrate for monitoring and resumption. OpenHands describes an append-only, typed event history, atomic interruptible steps, context condensation, and a security-analysis step before action execution. [C2]
-3. A safe pause is a first-class state, not an exception hidden in a prompt. LangGraph persists graph state before an interrupt, waits for external input, and resumes with the same thread ID; this is a direct pattern for human gates around destructive or ambiguous work. [C3]
-4. The model/tool loop should expose execution controls such as command timeouts and a plan/update mechanism. OpenAI’s Codex loop write-up shows shell tools with explicit `timeout_ms` and a first-class plan tool; the source documents mechanics, while the recommendation to enforce a timeout budget is an engineering inference. [C4]
-5. Heartbeats and patrol are separate from task completion. Gas Town gives the Deacon a persistent monitoring role and the Witness responsibility for worker health, nudging, and cleanup. A resident loop should therefore record liveness signals, worker activity, and terminal outcomes separately. [C5]
-6. Self-pacing intervals and the exact three-failure threshold in the companion document are operational choices marked `[OBS]`; the external corpus supports event-driven control, checkpoints, budgets, and human interrupts, but does not establish those exact numbers. [C1][C2][C3][C4][C5]
+1. A reliable loop has explicit lifecycle events and observable state transitions. Claude Code hooks expose session, tool, subagent, notification, stop, compaction, and file/configuration events; hooks are deterministic controls rather than instructions the model may or may not follow. `[C1]`
+2. Event logs provide a useful substrate for monitoring and resumption. OpenHands describes an append-only, typed event history, atomic interruptible steps, context condensation, and a security-analysis step before action execution. `[C2]`
+3. A safe pause is a first-class state, not an exception hidden in a prompt. LangGraph persists graph state before an interrupt, waits for external input, and resumes with the same thread ID; this is a direct pattern for human gates around destructive or ambiguous work. `[C3]`
+4. The model/tool loop should expose execution controls such as command timeouts and a plan/update mechanism. OpenAI’s Codex loop write-up shows shell tools with explicit `timeout_ms` and a first-class plan tool; the source documents mechanics, while the recommendation to enforce a timeout budget is an engineering inference. `[C4]`
+5. Heartbeats and patrol are separate from task completion. Gas Town gives the Deacon a persistent monitoring role and the Witness responsibility for worker health, nudging, and cleanup. A resident loop should therefore record liveness signals, worker activity, and terminal outcomes separately. `[C5]`
+6. Self-pacing intervals and the exact three-failure threshold in the companion document are operational choices marked `[OBS]`; the external corpus supports event-driven control, checkpoints, budgets, and human interrupts, but does not establish those exact numbers. `[C1] [C2] [C3] [C4] [C5]`
 
 ### 4. Implementations and failure cases
 
-1. Codex’s public harness report treats repository-local knowledge as the system of record, uses a short routing file, enforces architecture mechanically, and feeds review findings and bugs back into documentation or tooling. It also reports long runs and the need for observability feedback loops. These are documented implementation lessons, not a controlled comparison against other harnesses. [A3]
-2. Claude Code exposes concrete control surfaces for a resident harness: isolated subagents, independent permissions, optional worktree isolation, lifecycle hooks, and deterministic pre-tool/stop controls. The documentation describes capabilities and configuration, not a guarantee that a given deployment will be safe. [B3][C1]
-3. OpenHands separates agent reasoning, event history, tools, workspace/runtime, security analysis, and remote server concerns. Its published system paper describes the open platform and runtime approach; the current SDK documentation shows the more explicit stateless, event-driven design. [A5][C2][D1]
-4. SWE-agent demonstrates that the agent-computer interface itself is a major harness design variable: tuned commands, file viewing, editing, repository search, and test execution affected benchmark outcomes. The result is evidence for investing in tool contracts and feedback shape, not evidence that one ACI generalizes to every coding task. [D2]
-5. Devin’s public documentation positions it as an autonomous coding agent, recommends explicit completion criteria and well-scoped tasks, and acknowledges that difficult work should be split into smaller isolated sessions. Its release notes also record fixes for crashing, stuck, and hanging sessions. This is a practical boundary condition: autonomy is paired with scoping and verification, not treated as unlimited delegation. [D3][D4]
-6. Gas Town/Beads shows the OSS direction toward persistent identities, role-specific monitors, worktree-backed state, and dependency-aware work tracking. The same architecture also illustrates a risk: more roles and state stores increase coordination surfaces, so the orchestrator needs ownership, liveness, and cleanup rules. The risk statement is an inference from the documented architecture. [B5][C5]
+1. Codex’s public harness report treats repository-local knowledge as the system of record, uses a short routing file, enforces architecture mechanically, and feeds review findings and bugs back into documentation or tooling. It also reports long runs and the need for observability feedback loops. These are documented implementation lessons, not a controlled comparison against other harnesses. `[A3]`
+2. Claude Code exposes concrete control surfaces for a resident harness: isolated subagents, independent permissions, optional worktree isolation, lifecycle hooks, and deterministic pre-tool/stop controls. The documentation describes capabilities and configuration, not a guarantee that a given deployment will be safe. `[B3] [C1]`
+3. OpenHands separates agent reasoning, event history, tools, workspace/runtime, security analysis, and remote server concerns. Its published system paper describes the open platform and runtime approach; the current SDK documentation shows the more explicit stateless, event-driven design. `[A5] [C2] [D1]`
+4. SWE-agent demonstrates that the agent-computer interface itself is a major harness design variable: tuned commands, file viewing, editing, repository search, and test execution affected benchmark outcomes. The result is evidence for investing in tool contracts and feedback shape, not evidence that one ACI generalizes to every coding task. `[D2]`
+5. Devin’s public documentation positions it as an autonomous coding agent, recommends explicit completion criteria and well-scoped tasks, and acknowledges that difficult work should be split into smaller isolated sessions. Its release notes also record fixes for crashing, stuck, and hanging sessions. This is a practical boundary condition: autonomy is paired with scoping and verification, not treated as unlimited delegation. `[D3] [D4]`
+6. Gas Town/Beads shows the OSS direction toward persistent identities, role-specific monitors, worktree-backed state, and dependency-aware work tracking. The same architecture also illustrates a risk: more roles and state stores increase coordination surfaces, so the orchestrator needs ownership, liveness, and cleanup rules. The risk statement is an inference from the documented architecture. `[B5] [C5]`
 
 ## Design synthesis for a resident harness
 
@@ -68,14 +68,14 @@ The evidence supports the following portable design rules:
 
 | Rule | Evidence-backed rationale |
 |---|---|
-| Keep the entry point short and route to deeper sources | Long prompts crowd out task context; structured, indexed repository knowledge is easier to inspect and refresh. [A1][A3] |
-| Persist facts outside the active context | Memory files, checkpoints, and event histories make succession, replay, and recovery possible. [A2][A4][A5][C2] |
-| Assign one owner to each class of state | Copying rules across files creates stale contradictions; this is an inference from the documented drift and context-management failures. [A3] |
-| Delegate only bounded, independently useful work | Orchestrator-worker and manager-as-tool patterns preserve synthesis while clean contexts reduce noise. [B1][B2][B3][B4] |
-| Make verification criteria explicit | Evaluator loops, tool feedback, tests, and human gates need observable pass/fail conditions. [B1][B2][C3] |
-| Treat liveness, progress, and completion as different signals | Hooks, event logs, heartbeats, and patrol roles expose different lifecycle facts. [C1][C2][C5] |
-| Put budgets and stop states in the runtime | Multi-agent costs grow quickly; timeouts, interrupts, checkpoints, and explicit effort tiers prevent open-ended work. [B2][C3][C4] |
-| Increase autonomy only after observability and rollback exist | Public implementations pair autonomous execution with sandboxing, security checks, review loops, or scoped sessions. [A3][A5][C2][D3] |
+| Keep the entry point short and route to deeper sources | Long prompts crowd out task context; structured, indexed repository knowledge is easier to inspect and refresh. `[A1] [A3]` |
+| Persist facts outside the active context | Memory files, checkpoints, and event histories make succession, replay, and recovery possible. `[A2] [A4] [A5] [C2]` |
+| Assign one owner to each class of state | Copying rules across files creates stale contradictions; this is an inference from the documented drift and context-management failures. `[A3]` |
+| Delegate only bounded, independently useful work | Orchestrator-worker and manager-as-tool patterns preserve synthesis while clean contexts reduce noise. `[B1] [B2] [B3] [B4]` |
+| Make verification criteria explicit | Evaluator loops, tool feedback, tests, and human gates need observable pass/fail conditions. `[B1] [B2] [C3]` |
+| Treat liveness, progress, and completion as different signals | Hooks, event logs, heartbeats, and patrol roles expose different lifecycle facts. `[C1] [C2] [C5]` |
+| Put budgets and stop states in the runtime | Multi-agent costs grow quickly; timeouts, interrupts, checkpoints, and explicit effort tiers prevent open-ended work. `[B2] [C3] [C4]` |
+| Increase autonomy only after observability and rollback exist | Public implementations pair autonomous execution with sandboxing, security checks, review loops, or scoped sessions. `[A3] [A5] [C2] [D3]` |
 
 ## Source list
 
@@ -83,7 +83,7 @@ All sources below were opened successfully on 2026-07-15. Summaries are paraphra
 
 ### Axis 1 sources
 
-#### [A1] Anthropic — Effective context engineering for AI agents
+#### `[A1]` Anthropic — Effective context engineering for AI agents
 
 URL: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
 
@@ -93,7 +93,7 @@ URL: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-
 
 Access checked: 2026-07-15.
 
-#### [A2] Anthropic — Memory tool
+#### `[A2]` Anthropic — Memory tool
 
 URL: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
 
@@ -103,7 +103,7 @@ URL: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
 
 Access checked: 2026-07-15.
 
-#### [A3] OpenAI — Harness engineering: leveraging Codex in an agent-first world
+#### `[A3]` OpenAI — Harness engineering: leveraging Codex in an agent-first world
 
 URL: https://openai.com/index/harness-engineering/
 
@@ -113,7 +113,7 @@ URL: https://openai.com/index/harness-engineering/
 
 Access checked: 2026-07-15.
 
-#### [A4] LangChain — LangGraph persistence
+#### `[A4]` LangChain — LangGraph persistence
 
 URL: https://docs.langchain.com/oss/python/langgraph/persistence
 
@@ -123,7 +123,7 @@ URL: https://docs.langchain.com/oss/python/langgraph/persistence
 
 Access checked: 2026-07-15.
 
-#### [A5] OpenHands — Agent architecture
+#### `[A5]` OpenHands — Agent architecture
 
 URL: https://docs.openhands.dev/sdk/arch/agent
 
@@ -135,7 +135,7 @@ Access checked: 2026-07-15.
 
 ### Axis 2 sources
 
-#### [B1] Anthropic — Building effective AI agents
+#### `[B1]` Anthropic — Building effective AI agents
 
 URL: https://www.anthropic.com/engineering/building-effective-agents
 
@@ -145,7 +145,7 @@ URL: https://www.anthropic.com/engineering/building-effective-agents
 
 Access checked: 2026-07-15.
 
-#### [B2] Anthropic — How we built our multi-agent research system
+#### `[B2]` Anthropic — How we built our multi-agent research system
 
 URL: https://www.anthropic.com/engineering/multi-agent-research-system
 
@@ -155,7 +155,7 @@ URL: https://www.anthropic.com/engineering/multi-agent-research-system
 
 Access checked: 2026-07-15.
 
-#### [B3] Claude Code — Create custom subagents
+#### `[B3]` Claude Code — Create custom subagents
 
 URL: https://code.claude.com/docs/en/sub-agents
 
@@ -165,7 +165,7 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 Access checked: 2026-07-15.
 
-#### [B4] OpenAI Agents SDK — Agent orchestration
+#### `[B4]` OpenAI Agents SDK — Agent orchestration
 
 URL: https://openai.github.io/openai-agents-python/multi_agent/
 
@@ -175,7 +175,7 @@ URL: https://openai.github.io/openai-agents-python/multi_agent/
 
 Access checked: 2026-07-15.
 
-#### [B5] Gas Town — multi-agent workspace manager
+#### `[B5]` Gas Town — multi-agent workspace manager
 
 URL: https://github.com/gastownhall/gastown
 
@@ -187,7 +187,7 @@ Access checked: 2026-07-15.
 
 ### Axis 3 sources
 
-#### [C1] Claude Code — Automate actions with hooks
+#### `[C1]` Claude Code — Automate actions with hooks
 
 URL: https://code.claude.com/docs/en/hooks-guide
 
@@ -197,7 +197,7 @@ URL: https://code.claude.com/docs/en/hooks-guide
 
 Access checked: 2026-07-15.
 
-#### [C2] OpenHands — Events architecture
+#### `[C2]` OpenHands — Events architecture
 
 URL: https://docs.openhands.dev/sdk/arch/events
 
@@ -207,7 +207,7 @@ URL: https://docs.openhands.dev/sdk/arch/events
 
 Access checked: 2026-07-15.
 
-#### [C3] LangChain — LangGraph interrupts
+#### `[C3]` LangChain — LangGraph interrupts
 
 URL: https://docs.langchain.com/oss/python/langgraph/interrupts
 
@@ -217,7 +217,7 @@ URL: https://docs.langchain.com/oss/python/langgraph/interrupts
 
 Access checked: 2026-07-15.
 
-#### [C4] OpenAI — Unrolling the Codex agent loop
+#### `[C4]` OpenAI — Unrolling the Codex agent loop
 
 URL: https://openai.com/index/unrolling-the-codex-agent-loop/
 
@@ -227,7 +227,7 @@ URL: https://openai.com/index/unrolling-the-codex-agent-loop/
 
 Access checked: 2026-07-15.
 
-#### [C5] Gas Town — Architecture
+#### `[C5]` Gas Town — Architecture
 
 URL: https://docs.gastownhall.ai/design/architecture/
 
@@ -239,7 +239,7 @@ Access checked: 2026-07-15.
 
 ### Axis 4 sources
 
-#### [D1] OpenHands — An Open Platform for AI Software Developers as Generalist Agents
+#### `[D1]` OpenHands — An Open Platform for AI Software Developers as Generalist Agents
 
 URL: https://arxiv.org/abs/2407.16741
 
@@ -249,7 +249,7 @@ URL: https://arxiv.org/abs/2407.16741
 
 Access checked: 2026-07-15.
 
-#### [D2] SWE-agent — Agent-Computer Interfaces Enable Automated Software Engineering
+#### `[D2]` SWE-agent — Agent-Computer Interfaces Enable Automated Software Engineering
 
 URL: https://arxiv.org/abs/2405.15793
 
@@ -259,7 +259,7 @@ URL: https://arxiv.org/abs/2405.15793
 
 Access checked: 2026-07-15.
 
-#### [D3] Devin — Introducing Devin
+#### `[D3]` Devin — Introducing Devin
 
 URL: https://docs.devin.ai/get-started/devin-intro
 
@@ -269,7 +269,7 @@ URL: https://docs.devin.ai/get-started/devin-intro
 
 Access checked: 2026-07-15.
 
-#### [D4] Devin — 2024 release notes
+#### `[D4]` Devin — 2024 release notes
 
 URL: https://docs.devin.ai/release-notes/2024
 
