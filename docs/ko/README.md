@@ -59,6 +59,8 @@ cp .codex/config.example.toml .codex/config.toml
 
 붙여넣은 뒤 실제로 어떤 대화가 오가는지는 [bootstrap-walkthrough.md](./bootstrap-walkthrough.md)(한국어판)에서 미리 볼 수 있습니다.
 
+레포 여러 개를 상주 마스터 에이전트 + 워커 하청으로 운영하려면 [resident-orchestrator-loop.md](./resident-orchestrator-loop.md)를 읽으세요 — 멀티 레포 운영 층과 자율 Loop 설계(리서치 인용 포함).
+
 ### 기존 프로젝트라면? ingest를 쓰세요 (비파괴)
 
 위 Stage 1 복사 명령은 빈 repo용입니다. 이미 코드·문서가 있는 repo에선 그대로 쓰면 안 됩니다. 기존 `README.md`·`CLAUDE.md`·`.gitignore`를 덮어씁니다. 대신 `scripts/ingest.sh`를 씁니다.
