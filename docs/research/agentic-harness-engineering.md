@@ -1,5 +1,7 @@
 # Agentic Harness Engineering
 
+> English document. 한국어: [../ko/research/agentic-harness-engineering.md](../ko/research/agentic-harness-engineering.md)
+
 ## Research question
 
 What are the current best practices for designing a long-lived, resident AI coding-agent harness?
@@ -50,7 +52,7 @@ The accepted corpus contains 19 sources. Three candidate classes were discarded:
 2. Event logs provide a useful substrate for monitoring and resumption. OpenHands describes an append-only, typed event history, atomic interruptible steps, context condensation, and a security-analysis step before action execution. [C2]
 3. A safe pause is a first-class state, not an exception hidden in a prompt. LangGraph persists graph state before an interrupt, waits for external input, and resumes with the same thread ID; this is a direct pattern for human gates around destructive or ambiguous work. [C3]
 4. The model/tool loop should expose execution controls such as command timeouts and a plan/update mechanism. OpenAI’s Codex loop write-up shows shell tools with explicit `timeout_ms` and a first-class plan tool; the source documents mechanics, while the recommendation to enforce a timeout budget is an engineering inference. [C4]
-5. Heartbeats and patrol are separate from task completion. Gas Town gives the Deacon a persistent monitoring role and the Witness responsibility for worker health, nudging, and cleanup. A resident loop should therefore record liveness signals, worker activity, and terminal outcomes separately. [C5]
+5. Heartbeats and patrol are separate from task completion. Gas Town gives the Deacon a persistent monitoring role and the Witness responsibility for worker health, nudging, and cleanup. A resident loop should therefore record liveness signals, worker activity, and terminal outcomes separately. The last sentence is an engineering inference from [C5], not a claim in the source.
 6. Self-pacing intervals and the exact three-failure threshold in the companion document are operational choices marked `[OBS]`; the external corpus supports event-driven control, checkpoints, budgets, and human interrupts, but does not establish those exact numbers. [C1] [C2] [C3] [C4] [C5]
 
 ### 4. Implementations and failure cases
@@ -64,7 +66,7 @@ The accepted corpus contains 19 sources. Three candidate classes were discarded:
 
 ## Design synthesis for a resident harness
 
-The evidence supports the following portable design rules:
+The corpus does not prescribe a design. The rules below are engineering inferences; the right column cites only the evidence each one leans on.
 
 | Rule | Evidence-backed rationale |
 |---|---|
@@ -165,6 +167,8 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 Access checked: 2026-07-15.
 
+Re-checked 2026-08-02: the page documents nested subagents with a configurable depth limit.
+
 #### [B4] OpenAI Agents SDK — Agent orchestration
 
 URL: https://openai.github.io/openai-agents-python/multi_agent/
@@ -191,7 +195,7 @@ Access checked: 2026-07-15.
 
 URL: https://code.claude.com/docs/en/hooks-guide
 
-- Exposes deterministic lifecycle hooks for session start, tool calls, notifications, subagents, compaction, and stop.
+- Exposes deterministic lifecycle hooks for session start, tool calls, notifications, subagents, compaction, stop, `FileChanged`, and `ConfigChange` events.
 - Allows hooks to format, audit, inject context, block actions, or notify a human.
 - Separates deterministic command hooks from model-based judgment hooks.
 

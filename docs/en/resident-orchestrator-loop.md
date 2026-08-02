@@ -19,7 +19,7 @@ plain files, workers can be any CLI agent. What must be filled are the roles.
 
 | Role | Requirement | What happens without it |
 |---|---|---|
-| Residence | Run in the repos' common parent folder [AHE-A3] [OBS] | Cross-repo impact (API contract change → frontend regen) gets missed [OBS] |
+| Residence | Run in the repos' common parent folder [OBS] | Cross-repo impact (API contract change → frontend regen) gets missed [OBS] |
 | Durable memory | Rules/decisions/traps auto-injected at session start [AHE-A2] | Every new session repeats the same mistakes [OBS] |
 | Watch loop | Periodic diff of refs/dirty/worktrees/MRs [AHE-C1] [AHE-C5] | Nobody notices changes while the human is away [OBS] |
 | Delegation + gates | Workers implement; master re-verifies outputs; destructive acts need a human gate [AHE-B1] [AHE-C3] | Errors amplify, or a worker runs away [OBS] |
@@ -39,8 +39,8 @@ memory lives outside the context window, split into layers.
 This matches the documented pattern for long-horizon agents: persist structured
 notes outside the window [AHE-A1] [AHE-A2], and cross session boundaries via
 compaction (summarize, restart fresh seeded with the summary) [AHE-A1].
-OpenHands, LangGraph, and Claude’s memory documentation provide concrete
-file-, checkpoint-, and event-backed persistence mechanisms [AHE-A2] [AHE-A4]
+OpenHands, LangGraph, and Claude’s memory documentation provide, respectively,
+event-, checkpoint-, and file-backed persistence mechanisms [AHE-A2] [AHE-A4]
 [AHE-A5] [AHE-C2].
 
 One more rule keeps the structure alive long-term. **Two SSOTs**: the source
@@ -135,10 +135,10 @@ credits — that incident is where this rule comes from.)
   format.
 - Isolation: parallel file changes get per-worker worktrees. Always name the
   base branch explicitly (repos exist whose default branch pointer aims at
-  the release branch).
+  the release branch) [AHE-B3] [OBS].
 - Long-lived vs one-shot workers: recurring domain work benefits from a
   long-lived worker's accumulated context; one-off tasks get a clean-context
-   one-shot worker [AHE-B3] [AHE-B5].
+  one-shot worker [AHE-B3] [AHE-B5].
 
 ## 5. Grounding (research citations)
 
@@ -185,18 +185,18 @@ day.
 - Proposing without consulting decision memory → reopened a closed question.
   "The moment before writing a proposal sentence is when you search." [OBS]
 
-[AHE-A1]: ../research/agentic-harness-engineering.md
-[AHE-A2]: ../research/agentic-harness-engineering.md
-[AHE-A3]: ../research/agentic-harness-engineering.md
-[AHE-A4]: ../research/agentic-harness-engineering.md
-[AHE-A5]: ../research/agentic-harness-engineering.md
-[AHE-B1]: ../research/agentic-harness-engineering.md
-[AHE-B2]: ../research/agentic-harness-engineering.md
-[AHE-B3]: ../research/agentic-harness-engineering.md
-[AHE-B5]: ../research/agentic-harness-engineering.md
-[AHE-C1]: ../research/agentic-harness-engineering.md
-[AHE-C2]: ../research/agentic-harness-engineering.md
-[AHE-C3]: ../research/agentic-harness-engineering.md
-[AHE-C4]: ../research/agentic-harness-engineering.md
-[AHE-C5]: ../research/agentic-harness-engineering.md
+[AHE-A1]: ../research/agentic-harness-engineering.md#a1-anthropic--effective-context-engineering-for-ai-agents
+[AHE-A2]: ../research/agentic-harness-engineering.md#a2-anthropic--memory-tool
+[AHE-A3]: ../research/agentic-harness-engineering.md#a3-openai--harness-engineering-leveraging-codex-in-an-agent-first-world
+[AHE-A4]: ../research/agentic-harness-engineering.md#a4-langchain--langgraph-persistence
+[AHE-A5]: ../research/agentic-harness-engineering.md#a5-openhands--agent-architecture
+[AHE-B1]: ../research/agentic-harness-engineering.md#b1-anthropic--building-effective-ai-agents
+[AHE-B2]: ../research/agentic-harness-engineering.md#b2-anthropic--how-we-built-our-multi-agent-research-system
+[AHE-B3]: ../research/agentic-harness-engineering.md#b3-claude-code--create-custom-subagents
+[AHE-B5]: ../research/agentic-harness-engineering.md#b5-gas-town--multi-agent-workspace-manager
+[AHE-C1]: ../research/agentic-harness-engineering.md#c1-claude-code--automate-actions-with-hooks
+[AHE-C2]: ../research/agentic-harness-engineering.md#c2-openhands--events-architecture
+[AHE-C3]: ../research/agentic-harness-engineering.md#c3-langchain--langgraph-interrupts
+[AHE-C4]: ../research/agentic-harness-engineering.md#c4-openai--unrolling-the-codex-agent-loop
+[AHE-C5]: ../research/agentic-harness-engineering.md#c5-gas-town--architecture
 [OBS]: ../research/agentic-harness-engineering.md#limitations-and-unverified-areas

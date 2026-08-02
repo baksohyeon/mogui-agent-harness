@@ -6,7 +6,7 @@
 이 문서는 그 위층을 다룬다: **레포 여러 개를 혼자 관리하는 사람이, 공통 부모
 폴더에 마스터 에이전트를 상시 띄워 두고 실행을 워커에게 재하청하는 구조**와,
 그 마스터가 도는 자율 Loop의 설계다. 실제 서비스(백엔드 모노레포 + 프론트 레포,
-라이브 운영)에서 하루 종일 굴리며 사고까지 겪은 기록을 일반화했고, 근거가 되는
+라이브 운영)에서 하루 종일 굴리며 사고까지 겪은 기록을 일반화했고 [OBS], 근거가 되는
 외부 리서치를 말미에 인용한다. 출처 원문과 검증일은 [에이전틱 하네스
 엔지니어링 리서치 데이터](research/agentic-harness-engineering.md)에 모아 두었고,
 현지 운영에서 직접 관찰한 내용은 `[OBS]`로 표시한다.
@@ -18,7 +18,7 @@
 
 | 역할 | 요건 | 없으면 생기는 일 |
 |---|---|---|
-| 상주 위치 | 레포들의 공통 부모 폴더에서 실행 [AHE-A3] [OBS] | 교차 영향(API 계약 변경→프론트 재생성)을 놓친다 [OBS] |
+| 상주 위치 | 레포들의 공통 부모 폴더에서 실행 [OBS] | 교차 영향(API 계약 변경→프론트 재생성)을 놓친다 [OBS] |
 | 영구 기억 | 세션 시작 시 규칙·결정·함정 자동 주입 [AHE-A2] | 새 세션마다 같은 실수를 반복한다 [OBS] |
 | 감시 루프 | ref/dirty/워크트리/MR 변화를 주기 diff [AHE-C1] [AHE-C5] | 사람이 자리 비운 사이 변화를 아무도 모른다 [OBS] |
 | 하청 + 게이트 | 구현은 워커에, 산출물은 실측 재검증, 파괴 행위는 사람 게이트 [AHE-B1] [AHE-C3] | 오류가 증폭되거나 워커가 폭주한다 [OBS] |
@@ -66,7 +66,7 @@
    분해는 문제 유형이 아니라 **컨텍스트 경계** 기준으로 한다(플래너/테스터
    같은 역할 분할은 컨텍스트 공유 비용만 키운다) [AHE-B2] [AHE-B3].
 4. **VERIFY** — 산출물 실측 재검증. 워커의 완료 주장을 믿지 않고 diff·테스트·
-   실행으로 재확인한다. 검증 게이트에는 명시적 기준을 줘야 한다 — "괜찮아?"
+   실행으로 재확인한다 [OBS]. 검증 게이트에는 명시적 기준을 줘야 한다 — "괜찮아?"
    수준의 기준 없는 검증자는 고무도장이 된다 [AHE-B1]. 리뷰 에이전트의 지적도
    코드로 재확인한다(오검 기각 사례 실존) [OBS].
 5. **RECORD** — 이슈 노트, 티켓, 함정 메모리 적립(사고·오판마다 1건).
@@ -113,11 +113,11 @@
 - 격리: 병렬 파일 변경은 워커별 워크트리. 베이스 브랜치는 명시(기본 브랜치
   포인터가 릴리스 브랜치를 가리키는 레포가 실존한다) [AHE-B3] [OBS].
 - 장수 워커 vs 일회성 워커: 맥락 축적이 이득인 반복 도메인 작업은 장수
-워커에, 단발 작업은 깨끗한 컨텍스트의 일회성 워커에 [AHE-B3] [AHE-B5].
+  워커에, 단발 작업은 깨끗한 컨텍스트의 일회성 워커에 [AHE-B3] [AHE-B5].
 
 ## 5. 근거 (리서치 인용)
 
-방법 주기: 수용한 19개 출처의 URL, 접속 확인일, 주장별 근거는 동반 리서치
+방법 노트: 수용한 19개 출처의 URL, 접속 확인일, 주장별 근거는 동반 리서치
 문서에 정리했다. 여기서는 그 문서로 연결되는 간결한 교차 참조만 둔다. 별도의
 검증 투표를 새로 했다는 뜻은 아니다. `[OBS]`는 이 운영 환경에서 직접 측정한
 사실에만 사용한다.
@@ -155,18 +155,18 @@
 - 결정 메모리 미참조 제안 → 닫힌 논점 재개봉. "제안 문장을 쓰기 직전이 검색
   타이밍." [OBS]
 
-[AHE-A1]: ./research/agentic-harness-engineering.md
-[AHE-A2]: ./research/agentic-harness-engineering.md
-[AHE-A3]: ./research/agentic-harness-engineering.md
-[AHE-A4]: ./research/agentic-harness-engineering.md
-[AHE-A5]: ./research/agentic-harness-engineering.md
-[AHE-B1]: ./research/agentic-harness-engineering.md
-[AHE-B2]: ./research/agentic-harness-engineering.md
-[AHE-B3]: ./research/agentic-harness-engineering.md
-[AHE-B5]: ./research/agentic-harness-engineering.md
-[AHE-C1]: ./research/agentic-harness-engineering.md
-[AHE-C2]: ./research/agentic-harness-engineering.md
-[AHE-C3]: ./research/agentic-harness-engineering.md
-[AHE-C4]: ./research/agentic-harness-engineering.md
-[AHE-C5]: ./research/agentic-harness-engineering.md
+[AHE-A1]: ./research/agentic-harness-engineering.md#a1-anthropic--effective-context-engineering-for-ai-agents
+[AHE-A2]: ./research/agentic-harness-engineering.md#a2-anthropic--memory-tool
+[AHE-A3]: ./research/agentic-harness-engineering.md#a3-openai--harness-engineering-leveraging-codex-in-an-agent-first-world
+[AHE-A4]: ./research/agentic-harness-engineering.md#a4-langchain--langgraph-persistence
+[AHE-A5]: ./research/agentic-harness-engineering.md#a5-openhands--agent-architecture
+[AHE-B1]: ./research/agentic-harness-engineering.md#b1-anthropic--building-effective-ai-agents
+[AHE-B2]: ./research/agentic-harness-engineering.md#b2-anthropic--how-we-built-our-multi-agent-research-system
+[AHE-B3]: ./research/agentic-harness-engineering.md#b3-claude-code--create-custom-subagents
+[AHE-B5]: ./research/agentic-harness-engineering.md#b5-gas-town--multi-agent-workspace-manager
+[AHE-C1]: ./research/agentic-harness-engineering.md#c1-claude-code--automate-actions-with-hooks
+[AHE-C2]: ./research/agentic-harness-engineering.md#c2-openhands--events-architecture
+[AHE-C3]: ./research/agentic-harness-engineering.md#c3-langchain--langgraph-interrupts
+[AHE-C4]: ./research/agentic-harness-engineering.md#c4-openai--unrolling-the-codex-agent-loop
+[AHE-C5]: ./research/agentic-harness-engineering.md#c5-gas-town--architecture
 [OBS]: ./research/agentic-harness-engineering.md#한계와-미검증-영역
