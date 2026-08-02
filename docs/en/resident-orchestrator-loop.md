@@ -112,9 +112,9 @@ chat for its multi-agent research system [AHE-B2], so fan out only where
 parallelism genuinely pays.
 Embed explicit effort-scaling rules in the orchestrator (for example, one
 agent for simple lookups and 10+ only for large investigations) [OBS] — an
-early system without them
-   spawned 50 subagents for a simple query [AHE-B2]. Run subagents on clean
-   contexts and collect condensed summaries [AHE-B2][AHE-B3]. Route model costs:
+early system without them spawned 50 subagents for a simple query [AHE-B2].
+Run subagents on clean contexts and collect condensed summaries
+[AHE-B2][AHE-B3]. Route model costs:
 judgment/verification on the primary model, bulk execution/research on a
 separately-billed worker family. (The day this document was written, a
 research fan-out run on the primary model burned through the account's
