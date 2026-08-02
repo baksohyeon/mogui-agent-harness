@@ -30,10 +30,10 @@ The accepted corpus contains 19 sources. Three candidate classes were discarded:
 ### 1. Memory, context persistence, and SSOT
 
 1. Context is a finite attention budget, not an unlimited transcript. Anthropic describes context rot and recommends curating the smallest high-signal set of tokens; just-in-time retrieval and progressive disclosure keep working context focused. [A1]
-2. Long-horizon continuity needs an external write path. Compaction, structured note-taking, and multi-agent context separation are complementary techniques; a memory tool can persist files across conversations and retrieve them only when needed. [A1][A2]
+2. Long-horizon continuity needs an external write path. Compaction, structured note-taking, and multi-agent context separation are complementary techniques; a memory tool can persist files across conversations and retrieve them only when needed. [A1] [A2]
 3. A short entry-point file should route to deeper, versioned sources of truth. OpenAI’s harness report describes a short `AGENTS.md`, a structured `docs/` knowledge base, indexed plans, and mechanical freshness checks; it also records that a monolithic instruction file became stale and hard to verify. [A3]
-4. Durable execution and memory need a stable cursor and replay boundary. LangGraph checkpoints state by thread and supports fault-tolerant resume, time travel, and human inspection; OpenHands models the agent as an event-driven component that reads history and emits new events. [A4][A5]
-5. Practical implication: separate durable rules and decisions, task-state narrative, and session handoff narrative. Keep one authoritative owner for each fact, record freshness or verification status, and use links rather than copying the same rule into several instruction files. The last sentence is an engineering inference from [A1][A2][A3][A4], not a claim that the sources prescribe this exact three-layer layout.
+4. Durable execution and memory need a stable cursor and replay boundary. LangGraph checkpoints state by thread and supports fault-tolerant resume, time travel, and human inspection; OpenHands models the agent as an event-driven component that reads history and emits new events. [A4] [A5]
+5. Practical implication: separate durable rules and decisions, task-state narrative, and session handoff narrative. Keep one authoritative owner for each fact, record freshness or verification status, and use links rather than copying the same rule into several instruction files. The last sentence is an engineering inference from [A1] [A2] [A3] [A4], not a claim that the sources prescribe this exact three-layer layout.
 
 ### 2. Multi-agent delegation and verification
 
@@ -51,16 +51,16 @@ The accepted corpus contains 19 sources. Three candidate classes were discarded:
 3. A safe pause is a first-class state, not an exception hidden in a prompt. LangGraph persists graph state before an interrupt, waits for external input, and resumes with the same thread ID; this is a direct pattern for human gates around destructive or ambiguous work. [C3]
 4. The model/tool loop should expose execution controls such as command timeouts and a plan/update mechanism. OpenAI’s Codex loop write-up shows shell tools with explicit `timeout_ms` and a first-class plan tool; the source documents mechanics, while the recommendation to enforce a timeout budget is an engineering inference. [C4]
 5. Heartbeats and patrol are separate from task completion. Gas Town gives the Deacon a persistent monitoring role and the Witness responsibility for worker health, nudging, and cleanup. A resident loop should therefore record liveness signals, worker activity, and terminal outcomes separately. [C5]
-6. Self-pacing intervals and the exact three-failure threshold in the companion document are operational choices marked `[OBS]`; the external corpus supports event-driven control, checkpoints, budgets, and human interrupts, but does not establish those exact numbers. [C1][C2][C3][C4][C5]
+6. Self-pacing intervals and the exact three-failure threshold in the companion document are operational choices marked `[OBS]`; the external corpus supports event-driven control, checkpoints, budgets, and human interrupts, but does not establish those exact numbers. [C1] [C2] [C3] [C4] [C5]
 
 ### 4. Implementations and failure cases
 
 1. Codex’s public harness report treats repository-local knowledge as the system of record, uses a short routing file, enforces architecture mechanically, and feeds review findings and bugs back into documentation or tooling. It also reports long runs and the need for observability feedback loops. These are documented implementation lessons, not a controlled comparison against other harnesses. [A3]
-2. Claude Code exposes concrete control surfaces for a resident harness: isolated subagents, independent permissions, optional worktree isolation, lifecycle hooks, and deterministic pre-tool/stop controls. The documentation describes capabilities and configuration, not a guarantee that a given deployment will be safe. [B3][C1]
-3. OpenHands separates agent reasoning, event history, tools, workspace/runtime, security analysis, and remote server concerns. Its published system paper describes the open platform and runtime approach; the current SDK documentation shows the more explicit stateless, event-driven design. [A5][C2][D1]
+2. Claude Code exposes concrete control surfaces for a resident harness: isolated subagents, independent permissions, optional worktree isolation, lifecycle hooks, and deterministic pre-tool/stop controls. The documentation describes capabilities and configuration, not a guarantee that a given deployment will be safe. [B3] [C1]
+3. OpenHands separates agent reasoning, event history, tools, workspace/runtime, security analysis, and remote server concerns. Its published system paper describes the open platform and runtime approach; the current SDK documentation shows the more explicit stateless, event-driven design. [A5] [C2] [D1]
 4. SWE-agent demonstrates that the agent-computer interface itself is a major harness design variable: tuned commands, file viewing, editing, repository search, and test execution affected benchmark outcomes. The result is evidence for investing in tool contracts and feedback shape, not evidence that one ACI generalizes to every coding task. [D2]
-5. Devin’s public documentation positions it as an autonomous coding agent, recommends explicit completion criteria and well-scoped tasks, and acknowledges that difficult work should be split into smaller isolated sessions. Its release notes also record fixes for crashing, stuck, and hanging sessions. This is a practical boundary condition: autonomy is paired with scoping and verification, not treated as unlimited delegation. [D3][D4]
-6. Gas Town/Beads shows the OSS direction toward persistent identities, role-specific monitors, worktree-backed state, and dependency-aware work tracking. The same architecture also illustrates a risk: more roles and state stores increase coordination surfaces, so the orchestrator needs ownership, liveness, and cleanup rules. The risk statement is an inference from the documented architecture. [B5][C5]
+5. Devin’s public documentation positions it as an autonomous coding agent, recommends explicit completion criteria and well-scoped tasks, and acknowledges that difficult work should be split into smaller isolated sessions. Its release notes also record fixes for crashing, stuck, and hanging sessions. This is a practical boundary condition: autonomy is paired with scoping and verification, not treated as unlimited delegation. [D3] [D4]
+6. Gas Town/Beads shows the OSS direction toward persistent identities, role-specific monitors, worktree-backed state, and dependency-aware work tracking. The same architecture also illustrates a risk: more roles and state stores increase coordination surfaces, so the orchestrator needs ownership, liveness, and cleanup rules. The risk statement is an inference from the documented architecture. [B5] [C5]
 
 ## Design synthesis for a resident harness
 
@@ -68,14 +68,14 @@ The evidence supports the following portable design rules:
 
 | Rule | Evidence-backed rationale |
 |---|---|
-| Keep the entry point short and route to deeper sources | Long prompts crowd out task context; structured, indexed repository knowledge is easier to inspect and refresh. [A1][A3] |
-| Persist facts outside the active context | Memory files, checkpoints, and event histories make succession, replay, and recovery possible. [A2][A4][A5][C2] |
+| Keep the entry point short and route to deeper sources | Long prompts crowd out task context; structured, indexed repository knowledge is easier to inspect and refresh. [A1] [A3] |
+| Persist facts outside the active context | Memory files, checkpoints, and event histories make succession, replay, and recovery possible. [A2] [A4] [A5] [C2] |
 | Assign one owner to each class of state | Copying rules across files creates stale contradictions; this is an inference from the documented drift and context-management failures. [A3] |
-| Delegate only bounded, independently useful work | Orchestrator-worker and manager-as-tool patterns preserve synthesis while clean contexts reduce noise. [B1][B2][B3][B4] |
-| Make verification criteria explicit | Evaluator loops, tool feedback, tests, and human gates need observable pass/fail conditions. [B1][B2][C3] |
-| Treat liveness, progress, and completion as different signals | Hooks, event logs, heartbeats, and patrol roles expose different lifecycle facts. [C1][C2][C5] |
-| Put budgets and stop states in the runtime | Multi-agent costs grow quickly; timeouts, interrupts, checkpoints, and explicit effort tiers prevent open-ended work. [B2][C3][C4] |
-| Increase autonomy only after observability and rollback exist | Public implementations pair autonomous execution with sandboxing, security checks, review loops, or scoped sessions. [A3][A5][C2][D3] |
+| Delegate only bounded, independently useful work | Orchestrator-worker and manager-as-tool patterns preserve synthesis while clean contexts reduce noise. [B1] [B2] [B3] [B4] |
+| Make verification criteria explicit | Evaluator loops, tool feedback, tests, and human gates need observable pass/fail conditions. [B1] [B2] [C3] |
+| Treat liveness, progress, and completion as different signals | Hooks, event logs, heartbeats, and patrol roles expose different lifecycle facts. [C1] [C2] [C5] |
+| Put budgets and stop states in the runtime | Multi-agent costs grow quickly; timeouts, interrupts, checkpoints, and explicit effort tiers prevent open-ended work. [B2] [C3] [C4] |
+| Increase autonomy only after observability and rollback exist | Public implementations pair autonomous execution with sandboxing, security checks, review loops, or scoped sessions. [A3] [A5] [C2] [D3] |
 
 ## Source list
 
