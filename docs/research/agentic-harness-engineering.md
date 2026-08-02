@@ -163,15 +163,11 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 - Provides isolated context windows, custom prompts, tool allow/deny lists, permission modes, and optional worktree isolation.
 - Recommends subagents for noisy side work so only a summary returns to the parent context.
-- Near first access (2026-07-15), a Wayback snapshot from 2026-07-14 already documented nested subagents (from Claude Code v2.1.172) with a fixed five-layer depth cap that was not configurable. Historical snapshot: https://web.archive.org/web/20260714120540/https://code.claude.com/docs/en/sub-agents
-- Current documentation (re-checked 2026-08-02) still allows nesting and exposes `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` (default three layers below the main conversation; set `1` to disable nesting). Live section: https://code.claude.com/docs/en/sub-agents#let-subagents-spawn-their-own-subagents
+- Nesting history on the live docs page (re-checked 2026-08-02): v2.1.172–v2.1.216 nested by default up to five layers with a non-configurable limit; v2.1.217–v2.1.218 defaulted the limit to one; v2.1.219 raised the default to three. Supporting Wayback snapshot near first access (2026-07-14): https://web.archive.org/web/20260714120540/https://code.claude.com/docs/en/sub-agents
+- Current documentation (re-checked 2026-08-02) states that by default a subagent can spawn subagents of its own up to three layers below the main conversation, and exposes `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` to change that limit (set `1` to disable nesting). Live section: https://code.claude.com/docs/en/sub-agents#let-subagents-spawn-their-own-subagents
 - Treat delegation-graph boundedness as versioned policy/depth configuration, not a permanent platform invariant.
 
 Access checked: 2026-07-15.
-
-Historical snapshot (Wayback 2026-07-14): nested subagents with fixed five-layer depth, not configurable.
-
-Re-checked 2026-08-02: nested subagents with configurable depth via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` (default 3).
 
 #### [B4] OpenAI Agents SDK — Agent orchestration
 
