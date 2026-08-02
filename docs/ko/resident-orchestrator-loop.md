@@ -42,10 +42,12 @@
 
 여기에 하나를 더 지켜야 구조가 오래 간다. **SSOT 이원화**: 의도·계획의 원본은
 인간 소유 문서에, 실행 상태·사실의 원본은 메모리 저장소에 두고, 서로를 복제하지
-않는다(포인터만). 같은 내용이 두 곳에 사는 순간부터 드리프트가 시작된다 —
-선행 하네스의 `.agent` 파일들이 코드 실상과 어긋난 stale 사례가 이것이다
-[OBS]. 드리프트를 줄이기 위한 짧은 라우터·구조화 문서·기계적 최신성 검사는
-OpenAI가 공개한 하네스 경험과도 맞닿아 있다 [AHE-A3].
+않는다(포인터만). 이 레포에서는 `docs/wiki/`가 사람 승인 의도와 장기 결정을,
+`.planning/`이 실행 상태와 사실 기반 진행(핸드오프·결정 상태 포함)을,
+`.agent/`가 세션 컨텍스트와 학습 메모리(함정 포함)를 맡는다. 같은 내용이 두 곳에
+사는 순간부터 드리프트가 시작된다 — 선행 하네스의 stale `.agent` 파일이 정확히
+그 실패 모드였다 [OBS]. 저장소 간에는 내용 복제 대신 포인터 연결을 유지하고,
+짧은 라우터·구조화 문서·기계적 최신성 검사를 함께 사용한다 [AHE-A3].
 
 ## 3. 자율 Loop: 듀티 사이클 6단계
 
@@ -91,8 +93,8 @@ OpenAI가 공개한 하네스 경험과도 맞닿아 있다 [AHE-A3].
 멀티에이전트는 기본값이 아니다. Anthropic은 자사 멀티에이전트 리서치 시스템이
 일반 대화 대비 약 15배의 토큰을 썼다고 보고하므로 [AHE-B2], 병렬성이 실제로
 이득인 고가치 작업에만 fan-out한다.
-오케스트레이터에는 명시적 effort-scaling 규칙을 심는다(단순 조회 1에이전트,
-대규모 조사에만 10+) — 이 규칙이 없던 초기 시스템은 단순 질의에 50개
+오케스트레이터에는 명시적 effort-scaling 규칙을 심는다(예: 단순 조회 1에이전트,
+대규모 조사에만 10+) [OBS] — 이 규칙이 없던 초기 시스템은 단순 질의에 50개
 서브에이전트를 띄웠다 [AHE-B2]. 서브에이전트는 깨끗한 컨텍스트로 돌리고
 응축 요약만 회수한다 [AHE-B2][AHE-B3]. 그리고 모델 비용 라우팅: 판단·검수는
 주 모델, 대량 실행·리서치는 별도 과금 계열의 워커로. (이 문서를 만들던 날,
@@ -100,9 +102,12 @@ OpenAI가 공개한 하네스 경험과도 맞닿아 있다 [AHE-A3].
 
 ## 4. 위임 프로토콜 체크리스트
 
-- 워커 스폰 후 **수신 검증까지가 디스패치다**: TUI idle 확인 → 주입 →
-  터미널 tail에 태스크 텍스트가 실제로 보이는지 실측. 주입은 셸 초기화·
-  자동 업데이트와 레이스해서 조용히 유실될 수 있다(3회 실측) [OBS].
+- 워커 스폰 후 **수신 검증까지가 디스패치다**: 도구 중립 수신 계약으로 확인한다.
+  포터블 필드(`worker_id`, `task_id`, `target_path`, `instruction_digest`,
+  `accepted_at`)를 남기고, 명시한 시간 안에 확인 응답이 없으면 디스패치 실패로
+  처리한다. tmux/TUI tail 확인은 하나의 어댑터일 뿐이며, 파일 기반 워커는 같은
+  필드를 담은 수신 기록으로 동일 계약을 충족할 수 있다. 주입은 셸 초기화·자동
+  업데이트와 레이스해서 조용히 유실될 수 있다(3회 실측) [OBS].
 - 작업 명세에 반드시: 목표, 대상 경로(워크트리), 산출 형식, 금지사항
   (push·외부 API·스코프 밖 파일), 완료 보고 형식.
 - 격리: 병렬 파일 변경은 워커별 워크트리. 베이스 브랜치는 명시(기본 브랜치
@@ -149,3 +154,19 @@ OpenAI가 공개한 하네스 경험과도 맞닿아 있다 [AHE-A3].
 - 리서치 fan-out을 주 모델로 실행 → 크레딧 소진. 비용 라우팅 규칙 명문화 [OBS].
 - 결정 메모리 미참조 제안 → 닫힌 논점 재개봉. "제안 문장을 쓰기 직전이 검색
   타이밍." [OBS]
+
+[AHE-A1]: ./research/agentic-harness-engineering.md
+[AHE-A2]: ./research/agentic-harness-engineering.md
+[AHE-A3]: ./research/agentic-harness-engineering.md
+[AHE-A4]: ./research/agentic-harness-engineering.md
+[AHE-A5]: ./research/agentic-harness-engineering.md
+[AHE-B1]: ./research/agentic-harness-engineering.md
+[AHE-B2]: ./research/agentic-harness-engineering.md
+[AHE-B3]: ./research/agentic-harness-engineering.md
+[AHE-B5]: ./research/agentic-harness-engineering.md
+[AHE-C1]: ./research/agentic-harness-engineering.md
+[AHE-C2]: ./research/agentic-harness-engineering.md
+[AHE-C3]: ./research/agentic-harness-engineering.md
+[AHE-C4]: ./research/agentic-harness-engineering.md
+[AHE-C5]: ./research/agentic-harness-engineering.md
+[OBS]: ./research/agentic-harness-engineering.md#한계와-미검증-영역

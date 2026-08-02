@@ -287,3 +287,23 @@ Access checked: 2026-07-15.
 - No independent longitudinal study here verifies memory drift rates, handoff fidelity, cost break-even points, or the safety of autonomous merge/deploy behavior.
 - OSS architecture documents describe intended roles and control flow; they do not prove that all deployments preserve those boundaries under failure or adversarial input.
 - The supplied JSONL material was intentionally not used as evidence because it was unrelated to this research question and had not been source-verified.
+
+[A1]: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+[A2]: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
+[A3]: https://openai.com/index/harness-engineering/
+[A4]: https://docs.langchain.com/oss/python/langgraph/persistence
+[A5]: https://docs.openhands.dev/sdk/arch/agent
+[B1]: https://www.anthropic.com/engineering/building-effective-agents
+[B2]: https://www.anthropic.com/engineering/multi-agent-research-system
+[B3]: https://code.claude.com/docs/en/sub-agents
+[B4]: https://openai.github.io/openai-agents-python/multi_agent/
+[B5]: https://github.com/gastownhall/gastown
+[C1]: https://code.claude.com/docs/en/hooks-guide
+[C2]: https://docs.openhands.dev/sdk/arch/events
+[C3]: https://docs.langchain.com/oss/python/langgraph/interrupts
+[C4]: https://openai.com/index/unrolling-the-codex-agent-loop/
+[C5]: https://docs.gastownhall.ai/design/architecture/
+[D1]: https://arxiv.org/abs/2407.16741
+[D2]: https://arxiv.org/abs/2405.15793
+[D3]: https://docs.devin.ai/get-started/devin-intro
+[D4]: https://docs.devin.ai/release-notes/2024

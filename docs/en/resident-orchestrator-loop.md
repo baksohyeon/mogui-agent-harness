@@ -9,7 +9,7 @@ subcontracts implementation to worker agents** — plus the design of the
 autonomous loop the master runs. It generalizes a full day of operating this
 on a live service (backend monorepo + frontend repo), incidents included [OBS], and
 cites the external research that grounds each rule. The source corpus is
-maintained in [Agentic Harness Engineering research data](research/agentic-harness-engineering.md);
+maintained in [Agentic Harness Engineering research data](../research/agentic-harness-engineering.md);
 claims from the local operating day are marked `[OBS]`.
 
 Tool names are examples. The resident terminal can be tmux, memory can be
@@ -46,11 +46,14 @@ file-, checkpoint-, and event-backed persistence mechanisms [AHE-A2][AHE-A4]
 One more rule keeps the structure alive long-term. **Two SSOTs**: the source
 of truth for intent/plans is human-owned documents; the source of truth for
 execution state/facts is the memory store — and neither copies the other
-(pointers only). Drift starts the moment the same content lives in two places;
-a predecessor harness's auto-injected `.agent` files going stale against the
-actual code is exactly this failure [OBS]. The drift-control recommendation is
-consistent with the repository knowledge-base and mechanical freshness checks
-described by OpenAI [AHE-A3].
+(pointers only). In this repository, `docs/wiki/` owns human-approved intent
+and long-term decisions, `.planning/` owns execution state and factual
+progress (including handoffs and decision status), and `.agent/` owns session
+context and learning memory (including traps). Drift starts the moment the same
+content lives in two places; the predecessor harness's stale `.agent` files
+were exactly this failure mode [OBS]. Keep these stores pointer-linked rather
+than duplicated, consistent with repository knowledge mapping and freshness
+checks [AHE-A3].
 
 ## 3. The autonomous loop: a six-step duty cycle
 
@@ -107,8 +110,9 @@ without a time budget and explicit stop conditions run away [AHE-B1][AHE-C3]
 Multi-agent is not the default. Anthropic reports about 15x the token use of
 chat for its multi-agent research system [AHE-B2], so fan out only where
 parallelism genuinely pays.
-Embed explicit effort-scaling rules in the orchestrator (one agent for simple
-lookups; 10+ only for large investigations) — an early system without them
+Embed explicit effort-scaling rules in the orchestrator (for example, one
+agent for simple lookups and 10+ only for large investigations) [OBS] — an
+early system without them
    spawned 50 subagents for a simple query [AHE-B2]. Run subagents on clean
    contexts and collect condensed summaries [AHE-B2][AHE-B3]. Route model costs:
 judgment/verification on the primary model, bulk execution/research on a
@@ -118,10 +122,14 @@ credits — that incident is where this rule comes from.)
 
 ## 4. Delegation protocol checklist
 
-- **Dispatch isn't done until receipt is verified**: confirm TUI idle →
-  inject → empirically confirm the task text appears in the terminal tail.
-  Injection races shell init and auto-updates, and loses tasks silently
-  (observed three times) [OBS].
+- **Dispatch isn't done until receipt is verified**: use a tool-neutral
+  receipt contract with portable fields (`worker_id`, `task_id`, `target_path`,
+  `instruction_digest`, `accepted_at`). Verify acknowledgement within an
+  explicit timeout and treat missing acknowledgement as a failed dispatch.
+  tmux/TUI tail checks are one adapter; file-backed workers can satisfy the
+  same contract by writing an equivalent acknowledgement record. Injection
+  races shell init and auto-updates, and can lose tasks silently (observed
+  three times) [OBS].
 - Every task spec includes: objective, target path (worktree), output format,
   prohibitions (push, external APIs, out-of-scope files), completion report
   format.
@@ -176,3 +184,19 @@ day.
   a written rule [OBS].
 - Proposing without consulting decision memory → reopened a closed question.
   "The moment before writing a proposal sentence is when you search." [OBS]
+
+[AHE-A1]: ../research/agentic-harness-engineering.md
+[AHE-A2]: ../research/agentic-harness-engineering.md
+[AHE-A3]: ../research/agentic-harness-engineering.md
+[AHE-A4]: ../research/agentic-harness-engineering.md
+[AHE-A5]: ../research/agentic-harness-engineering.md
+[AHE-B1]: ../research/agentic-harness-engineering.md
+[AHE-B2]: ../research/agentic-harness-engineering.md
+[AHE-B3]: ../research/agentic-harness-engineering.md
+[AHE-B5]: ../research/agentic-harness-engineering.md
+[AHE-C1]: ../research/agentic-harness-engineering.md
+[AHE-C2]: ../research/agentic-harness-engineering.md
+[AHE-C3]: ../research/agentic-harness-engineering.md
+[AHE-C4]: ../research/agentic-harness-engineering.md
+[AHE-C5]: ../research/agentic-harness-engineering.md
+[OBS]: ../research/agentic-harness-engineering.md#limitations-and-unverified-areas

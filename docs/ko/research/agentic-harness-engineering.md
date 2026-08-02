@@ -283,3 +283,23 @@ URL: https://docs.devin.ai/release-notes/2024
 - 메모리 드리프트율, 핸드오프 충실도, 비용 손익분기점, 자율 merge·배포의 안전성을 독립적으로 검증한 장기 연구는 포함하지 않았다.
 - 오픈소스 아키텍처 문서는 의도한 역할과 흐름을 설명할 뿐, 장애나 적대적 입력에서도 모든 배포가 경계를 지킨다는 증거는 아니다.
 - 제공된 JSONL은 이 질문과 무관하고 출처 검증도 되지 않았으므로 의도적으로 근거에서 제외했다.
+
+[A1]: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+[A2]: https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
+[A3]: https://openai.com/index/harness-engineering/
+[A4]: https://docs.langchain.com/oss/python/langgraph/persistence
+[A5]: https://docs.openhands.dev/sdk/arch/agent
+[B1]: https://www.anthropic.com/engineering/building-effective-agents
+[B2]: https://www.anthropic.com/engineering/multi-agent-research-system
+[B3]: https://code.claude.com/docs/en/sub-agents
+[B4]: https://openai.github.io/openai-agents-python/multi_agent/
+[B5]: https://github.com/gastownhall/gastown
+[C1]: https://code.claude.com/docs/en/hooks-guide
+[C2]: https://docs.openhands.dev/sdk/arch/events
+[C3]: https://docs.langchain.com/oss/python/langgraph/interrupts
+[C4]: https://openai.com/index/unrolling-the-codex-agent-loop/
+[C5]: https://docs.gastownhall.ai/design/architecture/
+[D1]: https://arxiv.org/abs/2407.16741
+[D2]: https://arxiv.org/abs/2405.15793
+[D3]: https://docs.devin.ai/get-started/devin-intro
+[D4]: https://docs.devin.ai/release-notes/2024
