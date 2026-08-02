@@ -32,11 +32,17 @@ bash .claude/hooks/wiki-health.sh                        # stale wiki (>180d)
 
 Open PRs/MRs via the repo's forge CLI, read-only: `gh pr list --base <branch>` (GitHub) or `glab mr list --target-branch <branch>` (GitLab). If the CLI is not authenticated for this host, skip and note it in STATE.
 
+**Review-evidence signal (per open PR, read-only).** For each open PR branch, check whether a local review log exists: `~/.gstack/projects/<slug>/<branch>-reviews.jsonl` (branch name normalized by stripping `/`, e.g. `chore/x` → `chorex`). Present → `/review`/`/review-pr` ran; absent → it didn't. This is a **local, per-machine** signal: a PR reviewed on another machine won't show here — report "no local review evidence", never assert "not reviewed".
+
+**Harness-file-change signal (per open PR, read-only).** For each open PR, check whether it touches harness files via `gh pr view <N> --json files`: paths under `.gitignore`·`.agent/**`·`.claude/**`·`.codex/**`·`scripts/**`·`templates/**` → record `- [pr] #N touches harness files → recommend human review`. This gathers samples of personal/local state leaking into the shared harness.
+
 **Accuracy rule:** never report a tool as "missing / not configured" without actually attempting it. If an alternate tool is in scope (e.g. `glab` when `gh` fails), try it before judging. A skipped attempt reported as a finding is a false positive that erodes trust in the loop. (Learned in the first field dry-run: `gh` failed on a GitLab remote and the report said "needs glab auth" — but `glab` was already authenticated and was simply never run.)
 
 3. **Triage** — normalize each signal into a one-line item:
 `- [area] observation → suggested action` (areas: `commits` · `pr` · `graph` · `memory` · `wiki`).
-Priority: graph branch-mismatch / CI-lag signals > stale docs > informational.
+Priority: harness-file-change PRs > graph branch-mismatch / CI-lag signals > open PRs with no review evidence > stale docs > informational.
+
+**Consult the exclusion list (required).** Before raising items, read the `Tracking exclusions` table in `.agent/loops/daily-triage.STATE.md`: do not raise excluded targets, and drop them from the consecutive-unresolved count. For each excluded row, check its re-review condition — if met (e.g. a draft PR flipped to `--ready`), remove the row and let the item flow back into normal triage. This is how healthy in-progress work (the author's own WIP) stops tripping the retry-storm kill switch.
 
 4. **Update STATE** — replace the `Latest run` section of `.agent/loops/daily-triage.STATE.md`: run timestamp, last processed commit (default-branch HEAD sha), triage items, delta vs previous run (new / resolved).
 
