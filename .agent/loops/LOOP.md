@@ -43,12 +43,14 @@ A promotion is recorded by editing the loop's Maturity row plus a one-line reaso
 
 - New commits on the default branch since the last run (`git log`)
 - Open PRs/MRs targeting the default branch (forge CLI: `gh pr list --base <branch>` or `glab mr list --target-branch <branch>`, read-only)
+- Per-open-PR review evidence — whether `~/.gstack/projects/<slug>/<branch>-reviews.jsonl` exists (local, per-machine signal; absence never asserts "not reviewed")
+- Per-open-PR harness-file changes — flag PRs touching `.gitignore`·`.agent/**`·`.claude/**`·`.codex/**`·`scripts/**`·`templates/**` for human review
 - `code-review-graph status` / `code-review-graph detect-changes --brief` (branch-mismatch and change signals; skip if not installed)
 - Stale memory/wiki — reuse `.claude/hooks/memory-health.sh` (>14d) and `.claude/hooks/wiki-health.sh` (>180d)
 
 ### Kill switch / pause criteria
 
-- Same item unresolved for 3 consecutive runs → escalate to human (retry-storm guard)
+- Same item unresolved for 3 consecutive runs → escalate to human (retry-storm guard). Rows in the STATE file's `Tracking exclusions` table are omitted from this count until their re-review condition is met.
 - A run exceeds the budget below → stop immediately
 - Any diff outside the state file / run log → **L1 invariant violated, stop** (verify with `git status`)
 - 3 unreviewed loop PRs accumulated → stop proposing (L2+)
