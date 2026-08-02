@@ -114,11 +114,11 @@ Embed explicit effort-scaling rules in the orchestrator (for example, one
 agent for simple lookups and 10+ only for large investigations) [OBS] — an
 early system without them spawned 50 subagents for a simple query [AHE-B2].
 Run subagents on clean contexts and collect condensed summaries
-[AHE-B2] [AHE-B3]. Route model costs:
+[AHE-B2] [AHE-B3]. Local policy for model-cost routing [OBS]:
 judgment/verification on the primary model, bulk execution/research on a
 separately-billed worker family. (The day this document was written, a
 research fan-out run on the primary model burned through the account's
-credits — that incident is where this rule comes from.)
+credits — that incident is where this rule comes from [OBS].)
 
 ## 4. Delegation protocol checklist
 

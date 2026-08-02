@@ -161,11 +161,15 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 - 격리된 컨텍스트, 사용자 지정 프롬프트, 도구 허용·차단 목록, 권한 모드, 선택적 worktree 격리를 제공한다.
 - 출력이 큰 조사·테스트를 서브에이전트에 맡기고 부모에는 요약만 돌려주는 방식을 권한다.
-- 접속 시점(2026-07-15) 기준으로는 서브에이전트의 재귀 생성이 불가하다고 명시했으나, 현행 문서는 깊이 설정 한도 내 중첩 서브에이전트를 허용한다. 위임 그래프의 제한은 플랫폼 불변식이 아니라 정책·깊이 설정으로 취급할 것.
+- 최초 접속일(2026-07-15) 근처 Wayback 스냅샷(2026-07-14)은 이미 중첩 서브에이전트(Claude Code v2.1.172부터)를 문서화했고, 깊이 상한은 5단계로 고정·비설정이었다. 역사 스냅샷: https://web.archive.org/web/20260714120540/https://code.claude.com/docs/en/sub-agents
+- 현행 문서(재확인 2026-08-02)는 중첩을 유지하며 `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`로 깊이를 설정한다(기본값: 메인 대화 아래 3계층; `1`이면 중첩 비활성). 라이브 절: https://code.claude.com/docs/en/sub-agents#let-subagents-spawn-their-own-subagents
+- 위임 그래프 제한은 영구 플랫폼 불변식이 아니라 버전별로 바뀌는 정책·깊이 설정으로 취급할 것.
 
 접속 확인: 2026-07-15.
 
-재확인: 2026-08-02. 해당 페이지는 설정 가능한 깊이 한도를 둔 중첩 서브에이전트를 문서화한다.
+역사 스냅샷(Wayback 2026-07-14): 중첩 서브에이전트, 고정 5단계 깊이, 설정 불가.
+
+재확인: 2026-08-02. 중첩 서브에이전트와 `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`로 설정 가능한 깊이 한도(기본값 3).
 
 #### [B4] OpenAI Agents SDK — Agent orchestration
 
