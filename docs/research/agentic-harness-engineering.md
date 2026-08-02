@@ -161,7 +161,7 @@ URL: https://code.claude.com/docs/en/sub-agents
 
 - Provides isolated context windows, custom prompts, tool allow/deny lists, permission modes, and optional worktree isolation.
 - Recommends subagents for noisy side work so only a summary returns to the parent context.
-- States that subagents cannot recursively spawn other subagents, making the delegation graph bounded by the parent.
+- At access time (2026-07-15) stated that subagents cannot recursively spawn other subagents; current documentation allows nested subagents up to a configurable depth. Treat delegation-graph boundedness as a policy/depth configuration, not a hard platform invariant.
 
 Access checked: 2026-07-15.
 
