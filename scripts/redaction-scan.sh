@@ -53,7 +53,9 @@ EXTRA_UNUSABLE=0
 EXTRA_CONSIDERED=0
 
 usage() {
-  sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # Leading comment block through the blank line before set -euo (coverage
+  # disclosure included). Range is derived from the file, not a fixed end line.
+  sed -n '2,/^set -euo pipefail$/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -305,10 +307,18 @@ materialise_scan_tree() {
         fi
         dest_dir="$(dirname "${SCAN_TREE}/${path}")"
         mkdir -p "${dest_dir}"
-        # Index blob bytes, not the worktree file.
-        git show ":${path}" > "${SCAN_TREE}/${path}"
+        # Index blob bytes, not the worktree file. gitlink/submodule and other
+        # non-blob index entries can pass cat-file -e then fail show; that is
+        # undecidable, not a clean skip.
+        if ! git show ":${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
+          echo "redaction-scan: FAIL — cannot read index blob for ${path}" >&2
+          exit 2
+        fi
         ;;
       *)
+        # Skip symlinks: -f follows them and would scan the target under the
+        # link's repository path. Tracked link entries are out of tree bytes.
+        [[ -L "${path}" ]] && continue
         [[ -f "${path}" ]] || continue
         dest_dir="$(dirname "${SCAN_TREE}/${path}")"
         mkdir -p "${dest_dir}"
@@ -539,40 +549,84 @@ FINDINGS="$(wc -l < "${FINDINGS_FILE}" | tr -d ' ')"
 # Written to a file rather than captured via $(heredoc): nested quoted heredocs
 # inside command substitution trip bash 3.2 quote parsing on macOS.
 SCOPE_FILE="${WORK_DIR}/scope.txt"
-if ! python3 - "${CONFIG}" "${COMMIT_MESSAGES_SCANNED}" "${SCOPE_FILE}" <<'PY'
+# Always pass the committed base config as well as the active CONFIG: when org
+# rules are loaded, CONFIG is a generated org.toml that only [extend]s the base,
+# so uuid_session path exceptions live in BASE_CONFIG, not in the generated file.
+if ! python3 - "${CONFIG}" "${BASE_CONFIG}" "${COMMIT_MESSAGES_SCANNED}" "${SCOPE_FILE}" <<'PY'
 import re
 import sys
 from pathlib import Path
 
-config_path, commit_messages, out_path = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
-text = config_path.read_text(encoding="utf-8")
-# Isolate only the uuid_session [[rules]] block (not every rule before it).
-# Path exceptions and documented placeholders come from that block alone.
+config_path = Path(sys.argv[1])
+base_config = Path(sys.argv[2])
+commit_messages = sys.argv[3]
+out_path = Path(sys.argv[4])
+marker = 'id = "uuid_session"'
+
+
+def load_text_with_extends(path, seen=None):
+    """Return config text that includes uuid_session, following [extend] path."""
+    if seen is None:
+        seen = set()
+    resolved = str(path.resolve())
+    if resolved in seen:
+        return ""
+    seen.add(resolved)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    if marker in text:
+        return text
+    # org.toml form: [extend]\npath = "/abs/or/rel/base.toml"
+    match = re.search(
+        r"\[extend\][^\[]*?path\s*=\s*\"([^\"]+)\"",
+        text,
+        flags=re.S,
+    )
+    if match:
+        ext = Path(match.group(1))
+        if not ext.is_absolute():
+            ext = path.parent / ext
+        return load_text_with_extends(ext, seen)
+    return text
+
+
+# Prefer the active config chain; fall back to the committed base so a generated
+# org overlay cannot print path-excused=none while the engine still inherits it.
+text = load_text_with_extends(config_path)
+if marker not in text:
+    text = load_text_with_extends(base_config)
+if marker not in text:
+    print(
+        "redaction-scan: FAIL — uuid_session rule not found in config chain (undecidable)",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
 paths = []
 placeholders = []
-marker = 'id = "uuid_session"'
 id_at = text.find(marker)
-if id_at >= 0:
-    start = text.rfind("[[rules]]", 0, id_at)
-    if start < 0:
-        start = id_at
-    rest = text[start + 2 :]
-    next_rule = rest.find("\n[[rules]]")
-    next_allow = rest.find("\n[allowlist]")
-    end_rel = len(rest)
-    for candidate in (next_rule, next_allow):
-        if candidate >= 0:
-            end_rel = min(end_rel, candidate)
-    block = text[start : start + 2 + end_rel]
-    paths_block = re.search(r"paths\s*=\s*\[(.*?)\]", block, flags=re.S)
-    if paths_block:
-        triple = chr(39) * 3
-        found = re.findall(
-            triple + r"(.*?)" + triple + r"|\"(.*?)\"",
-            paths_block.group(1),
-        )
-        paths = [a or b for a, b in found]
-    placeholders = sorted(set(re.findall(r"<[A-Za-z0-9_-]+>", block)))
+start = text.rfind("[[rules]]", 0, id_at)
+if start < 0:
+    start = id_at
+rest = text[start + 2 :]
+next_rule = rest.find("\n[[rules]]")
+next_allow = rest.find("\n[allowlist]")
+end_rel = len(rest)
+for candidate in (next_rule, next_allow):
+    if candidate >= 0:
+        end_rel = min(end_rel, candidate)
+block = text[start : start + 2 + end_rel]
+paths_block = re.search(r"paths\s*=\s*\[(.*?)\]", block, flags=re.S)
+if paths_block:
+    triple = chr(39) * 3
+    found = re.findall(
+        triple + r"(.*?)" + triple + r"|\"(.*?)\"",
+        paths_block.group(1),
+    )
+    paths = [a or b for a, b in found]
+placeholders = sorted(set(re.findall(r"<[A-Za-z0-9_-]+>", block)))
 path_note = ",".join(paths) if paths else "none"
 ph_note = "|".join(placeholders) if placeholders else "angle-bracket-forms"
 line = (

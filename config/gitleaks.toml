@@ -116,13 +116,13 @@ regex = '''(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b'
   ]
 
 [allowlist]
-# Exact known-fake fixture strings only. Broad placeholder words (todo, xxx,
-# dummy, …) must never excuse a whole line: a real credential sharing a line
-# with those words would pass. Path exemptions below cover files whose whole
-# purpose is to carry patterns or synthetic fixtures.
-regexTarget = "line"
+# Exact known-fake fixture strings only. Matched against the detected secret
+# value (gitleaks default), never the full source line: a real credential that
+# shares a line with an allowed substring must still fail. Path exemptions
+# below cover files whose whole purpose is to carry patterns or synthetic
+# fixtures.
 regexes = [
-  # Whole-line / value fixtures used in docs and tests as non-secrets.
+  # Detected-secret fixtures used in docs and tests as non-secrets.
   '''(?i)AKIAIOSFODNN7EXAMPLE''',
   '''(?i)ghp_example''',
   '''(?i)xoxb\-example''',

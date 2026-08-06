@@ -56,14 +56,28 @@ make_fixture_repo() {
   git -C "${repo}" commit -q -m "fixture base"
 }
 
+# Host overrides that can change the ruleset or exit contract under test.
+SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG)
+
 run_scan() {
   local repo="$1"
   shift
   (
     cd "${repo}"
     # Drop host org patterns so tests see only the committed ruleset unless set.
-    env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG \
-      "$@" bash scripts/redaction-scan.sh
+    "${SCAN_ENV[@]}" "$@" bash scripts/redaction-scan.sh
+  )
+}
+
+# Invoke the scanner from a nested cwd inside the fixture repo.
+run_scan_from_nested() {
+  local repo="$1"
+  shift
+  mkdir -p "${repo}/nested/deep"
+  (
+    # nested/deep -> ../.. is the fixture root (not ../../..).
+    cd "${repo}/nested/deep"
+    "${SCAN_ENV[@]}" "$@" bash ../../scripts/redaction-scan.sh
   )
 }
 
@@ -272,7 +286,7 @@ printf 'clean worktree\n' > "${REPO}/staged-secret.txt"
 set +e
 OUT="$(
   cd "${REPO}"
-  env -u REDACTION_EXTRA_PATTERNS bash scripts/redaction-scan.sh --staged 2>&1
+  "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh --staged 2>&1
 )"
 EC=$?
 set -e
@@ -315,7 +329,7 @@ make_fixture_repo "${REPO}"
 set +e
 OUT="$(
   cd "${REPO}"
-  env -u REDACTION_EXTRA_PATTERNS bash scripts/redaction-scan.sh --allowlist 2>&1
+  "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh --allowlist 2>&1
 )"
 EC=$?
 set -e
@@ -408,6 +422,105 @@ if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
   ok "clean fixture -> exit 0"
 else
   bad "clean fixture expected exit 0 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Allowlist matches secret value, not full line (no regexTarget=line).
+# ---------------------------------------------------------------------------
+echo "-- allowlist: fixture word on line does not excuse real-shaped secret"
+REPO="${WORKDIR}/allowlist-secret-target"
+make_fixture_repo "${REPO}"
+# Synthetic github token shape plus an allowlisted fixture substring on the same
+# line. With regexTarget=line this would pass; secret-target must still fail.
+printf 'token %s see example.com\n' "${SYN_TOKEN}" > "${REPO}/mixed.txt"
+git -C "${REPO}" add mixed.txt
+git -C "${REPO}" commit -q -m "mixed"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 1 ]]; then
+  ok "example.com on line does not excuse synthetic token (secret-target allowlist)"
+else
+  bad "expected exit 1 when secret shares line with fixture word (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Scope line follows [extend] when org rules wrap the base config.
+# ---------------------------------------------------------------------------
+echo "-- scope: org extend still reports uuid_session path-excused from base"
+REPO="${WORKDIR}/scope-extend"
+make_fixture_repo "${REPO}"
+printf 'org_ok|desc|orgtokenxyz[0-9]+\n' > "${WORKDIR}/ok-org.rules"
+set +e
+OUT="$(
+  cd "${REPO}"
+  REDACTION_EXTRA_PATTERNS="${WORKDIR}/ok-org.rules" \
+    env -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG \
+    bash scripts/redaction-scan.sh 2>&1
+)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] \
+  && [[ "${OUT}" == *"path-excused=tests/"* || "${OUT}" == *"path-excused=tests/,docs"* ]] \
+  && [[ "${OUT}" != *"path-excused=none"* ]]; then
+  ok "org extend scope line keeps base uuid_session path-excused"
+else
+  bad "scope with org extend should print base path-excused (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Scanner anchors on script location: nested cwd still works.
+# ---------------------------------------------------------------------------
+echo "-- nested cwd: clean and finding from child directory"
+REPO="${WORKDIR}/nested-cwd"
+make_fixture_repo "${REPO}"
+set +e
+OUT="$(run_scan_from_nested "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
+  ok "nested cwd clean scan -> exit 0"
+else
+  bad "nested cwd clean expected exit 0 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+printf 'path %s\n' "${SYN_HOME}" > "${REPO}/from-nested.txt"
+git -C "${REPO}" add from-nested.txt
+git -C "${REPO}" commit -q -m "plant nested"
+set +e
+OUT="$(run_scan_from_nested "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 1 ]] && [[ "${OUT}" == *"finding"* ]]; then
+  ok "nested cwd finding scan -> exit 1"
+else
+  bad "nested cwd finding expected exit 1 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Tracked symlink is skipped (not followed into target content).
+# ---------------------------------------------------------------------------
+echo "-- tracked symlink is not scanned as target content"
+REPO="${WORKDIR}/symlink-skip"
+make_fixture_repo "${REPO}"
+printf 'path %s\n' "${SYN_HOME}" > "${REPO}/target-secret.txt"
+ln -s target-secret.txt "${REPO}/link-secret.txt"
+# Only track the symlink; leave target untracked so a follow would be the only hit.
+git -C "${REPO}" add link-secret.txt
+git -C "${REPO}" commit -q -m "symlink only"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
+  ok "tracked symlink skipped (target content not scanned under link path)"
+else
+  bad "symlink-only tree expected exit 0 (got ${EC})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
