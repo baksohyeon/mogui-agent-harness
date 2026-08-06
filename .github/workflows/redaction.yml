@@ -2,8 +2,8 @@
 # organization patterns stay out of version control and still run locally when
 # REDACTION_EXTRA_PATTERNS is set.
 #
-# This repository had no other workflows when the gate was added; the install
-# pin and runner match the orchestrator's measured redaction job.
+# Runner is ubuntu-latest (Linux). Install pin is Linux-only with sha256sum —
+# no dead Darwin branch on a Linux runner.
 
 name: redaction
 
@@ -20,14 +20,16 @@ jobs:
       - name: Install gitleaks (pinned, checksum verified)
         shell: bash
         run: |
-          case "$(uname -s)-$(uname -m)" in
-            Linux-x86_64) f=gitleaks_8.30.1_linux_x64.tar.gz;    sum=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb ;;
-            Darwin-arm64) f=gitleaks_8.30.1_darwin_arm64.tar.gz; sum=b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5 ;;
-            *) echo "unmapped runner: $(uname -s)-$(uname -m)"; exit 1 ;;
+          case "$(uname -m)" in
+            x86_64)  f=gitleaks_8.30.1_linux_x64.tar.gz;    sum=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb ;;
+            aarch64) f=gitleaks_8.30.1_linux_arm64.tar.gz;  sum=e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080 ;;
+            *) echo "unmapped linux arch: $(uname -m)"; exit 1 ;;
           esac
           curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/$f"
-          echo "$sum  gitleaks.tgz" | shasum -a 256 -c -
+          echo "$sum  gitleaks.tgz" | sha256sum -c -
           tar -xzf gitleaks.tgz gitleaks
           sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
       - name: Scan tracked content (committed rules)
         run: ./scripts/redaction-scan.sh
+      - name: Regression tests for the gate
+        run: bash tests/redaction-gate/run.sh

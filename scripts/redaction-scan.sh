@@ -2,17 +2,17 @@
 # redaction-scan.sh — fail-closed pre-push / CI scan for secrets and internal identifiers.
 #
 # gitleaks is the matching engine. This script is what gitleaks does not do: scope
-# the scan to tracked content, scan commit messages, translate the organization
-# rules file into a gitleaks config, and state what was covered.
+# the scan to tracked or index content, scan commit messages, translate the
+# organization rules file into a gitleaks config, and state what was covered.
 #
 # Usage:
 #   scripts/redaction-scan.sh                 # all tracked files (default)
-#   scripts/redaction-scan.sh --staged        # index / staged only
+#   scripts/redaction-scan.sh --staged        # index blobs only (not worktree)
 #   scripts/redaction-scan.sh --range A..B    # files changed in a range, and those commits' messages
 #   scripts/redaction-scan.sh --commit-messages A..B   # message scan in any mode
 #   scripts/redaction-scan.sh --help
 #
-# Exit: 0 clean, 1 findings, 2 cannot decide (missing tool, missing required rules, usage)
+# Exit: 0 clean, 1 findings, 2 cannot decide (missing tool, missing/unusable rules, usage)
 #
 # Organization-specific rules (REDACTION_EXTRA_PATTERNS)
 #   Real company, product, and personal identifiers are deliberately not committed
@@ -23,6 +23,7 @@
 #
 #   Blank lines and lines beginning with # are skipped. Only the first two pipes
 #   separate fields, so a regex may contain a pipe. Every regex must compile.
+#   If any rule line is unusable, the scan exits 2 (reduced coverage is not a pass).
 #   With REDACTION_REQUIRE_EXTRA=1, a missing or empty file exits 2 instead of
 #   scanning with generic rules only.
 #
@@ -47,7 +48,7 @@ EXTRA_UNUSABLE=0
 EXTRA_CONSIDERED=0
 
 usage() {
-  sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -71,7 +72,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --allowlist)
-      LEGACY_ALLOWLIST="${2:-}"
+      if [[ $# -lt 2 || -z "${2}" ]]; then
+        echo "redaction-scan: --allowlist requires a path" >&2
+        exit 2
+      fi
+      LEGACY_ALLOWLIST="${2}"
       shift 2
       ;;
     --require-extra) REQUIRE_EXTRA=1; shift ;;
@@ -83,6 +88,10 @@ done
 
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "redaction-scan: FAIL — gitleaks is not on PATH; install it (brew install gitleaks) or see https://gitleaks.io" >&2
+  exit 2
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "redaction-scan: FAIL — python3 is not on PATH; install Python 3 (e.g. brew install python or apt install python3)" >&2
   exit 2
 fi
 if [[ ! -f "${BASE_CONFIG}" ]]; then
@@ -107,7 +116,11 @@ CONFIG="${BASE_CONFIG}"
 # Translate the organization rules file into a gitleaks config that extends the
 # committed one. The operator-facing format does not change, so no host has to
 # convert anything, and the patterns stay outside version control.
-if [[ -n "${REDACTION_EXTRA_PATTERNS:-}" && -f "${REDACTION_EXTRA_PATTERNS}" ]]; then
+if [[ -n "${REDACTION_EXTRA_PATTERNS:-}" ]]; then
+  if [[ ! -f "${REDACTION_EXTRA_PATTERNS}" ]]; then
+    echo "redaction-scan: FAIL — REDACTION_EXTRA_PATTERNS is set but not a readable file" >&2
+    exit 2
+  fi
   ORG_CONFIG="${WORK_DIR}/org.toml"
   if python3 - "${REDACTION_EXTRA_PATTERNS}" "${BASE_CONFIG}" "${ORG_CONFIG}" > "${WORK_DIR}/counts" <<'PY'
 import re
@@ -160,16 +173,17 @@ PY
     echo "redaction-scan: FAIL — could not read the organization rules file" >&2
     exit 2
   fi
+  if [[ "${EXTRA_UNUSABLE}" -gt 0 ]]; then
+    # Reduced coverage is not a pass. An unusable required rule must not green
+    # a scan that no longer sees what the rule was meant to catch.
+    echo "redaction-scan: FAIL — ${EXTRA_UNUSABLE} of ${EXTRA_CONSIDERED} organization rule lines are unusable; cannot load full ruleset" >&2
+    exit 2
+  fi
   if [[ "${EXTRA_RULE_COUNT}" -gt 0 ]]; then
     CONFIG="${ORG_CONFIG}"
   else
     # The count describes what was loaded, never what the file happened to hold.
-    # Reporting a number the scan did not use is the same defect this gate exists
-    # to catch, one level up.
     EXTRA_RULE_COUNT=0
-  fi
-  if [[ "${EXTRA_UNUSABLE}" -gt 0 ]]; then
-    echo "redaction-scan: WARNING — ${EXTRA_UNUSABLE} of ${EXTRA_CONSIDERED} organization rule lines are unusable and were skipped" >&2
   fi
   if [[ "${EXTRA_RULE_COUNT}" -gt 0 && "${EXTRA_NATIVE:-0}" -eq 0 ]]; then
     # A romanization only rule set misses the same identifier in its native
@@ -264,26 +278,93 @@ if [[ -n "${COMMIT_RANGE}" && "${COMMIT_RANGE}" != "${RANGE}" ]] \
 fi
 
 REPORTS="${WORK_DIR}/reports"
-mkdir -p "${REPORTS}"
+SCAN_TREE="${WORK_DIR}/scan-tree"
+mkdir -p "${REPORTS}" "${SCAN_TREE}"
 report_index=0
 
-scan_path() {
-  # One path per invocation. gitleaks scopes a single path argument reliably and
-  # falls back to the whole directory when given several, which would drag in
-  # untracked files and make a tracked scan depend on local scratch.
-  local path="$1"
-  [[ -f "${path}" ]] || return 0
+# Materialise exactly the bytes we intend to scan into a private tree, then run
+# one gitleaks process over that tree. Per-file process spawn was O(N) engine
+# startups and timed out as trees grew; a whole-directory scan of the live
+# worktree would also pick up untracked scratch. Staged mode reads index blobs
+# (git show :path), not worktree files, so a secret staged then deleted from
+# the worktree still fails the gate.
+materialise_scan_tree() {
+  local path dest_dir
+  file_count=0
+  while IFS= read -r -d '' path; do
+    [[ -z "${path}" ]] && continue
+    case "${MODE}" in
+      staged)
+        if ! git cat-file -e ":${path}" 2>/dev/null; then
+          continue
+        fi
+        dest_dir="$(dirname "${SCAN_TREE}/${path}")"
+        mkdir -p "${dest_dir}"
+        # Index blob bytes, not the worktree file.
+        git show ":${path}" > "${SCAN_TREE}/${path}"
+        ;;
+      *)
+        [[ -f "${path}" ]] || continue
+        dest_dir="$(dirname "${SCAN_TREE}/${path}")"
+        mkdir -p "${dest_dir}"
+        # Hardlink when possible to avoid copying large trees; fall back to cp.
+        if ! ln "${path}" "${SCAN_TREE}/${path}" 2>/dev/null; then
+          cp "${path}" "${SCAN_TREE}/${path}"
+        fi
+        ;;
+    esac
+    file_count=$((file_count + 1))
+  done < <(list_scan_files)
+}
+
+scan_materialised_tree() {
   report_index=$((report_index + 1))
-  if ! gitleaks dir "${path}" \
+  local report_path="${REPORTS}/${report_index}.json"
+  # Empty tree: write an empty report and skip the engine (no paths to leak).
+  if [[ "${file_count}" -eq 0 ]]; then
+    printf '[]\n' > "${report_path}"
+    return 0
+  fi
+  if ! gitleaks dir "${SCAN_TREE}" \
     --config "${CONFIG}" \
     --no-banner \
+    --redact \
     --exit-code 0 \
     --report-format json \
-    --report-path "${REPORTS}/${report_index}.json" \
+    --report-path "${report_path}" \
     >/dev/null 2>&1; then
-    # --exit-code 0 makes findings exit 0, so nonzero here is the engine
-    # failing, and a failed engine must not read as a clean file.
-    echo "redaction-scan: FAIL — gitleaks failed on ${path} (engine error, not a finding)" >&2
+    echo "redaction-scan: FAIL — gitleaks failed on materialised scan tree (engine error, not a finding)" >&2
+    exit 2
+  fi
+  # Rewrite absolute temp paths back to repository-relative paths so findings
+  # point at the source layout, never at the private materialisation tree.
+  if ! python3 - "${report_path}" "${SCAN_TREE}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+report_path, scan_tree = Path(sys.argv[1]), Path(sys.argv[2]).resolve()
+if not report_path.exists() or report_path.stat().st_size == 0:
+    report_path.write_text("[]\n", encoding="utf-8")
+    raise SystemExit(0)
+try:
+    rows = json.loads(report_path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"redaction-scan: FAIL — unreadable gitleaks report: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+if not isinstance(rows, list):
+    print("redaction-scan: FAIL — gitleaks report is not a JSON array", file=sys.stderr)
+    raise SystemExit(1)
+prefix = str(scan_tree) + "/"
+for row in rows:
+    file_path = row.get("File") or ""
+    if file_path.startswith(prefix):
+        row["File"] = file_path[len(prefix):]
+    elif file_path == str(scan_tree):
+        row["File"] = "."
+report_path.write_text(json.dumps(rows), encoding="utf-8")
+PY
+  then
     exit 2
   fi
 }
@@ -301,6 +382,7 @@ scan_commit_messages() {
       | gitleaks stdin \
           --config "${CONFIG}" \
           --no-banner \
+          --redact \
           --exit-code 0 \
           --report-format json \
           --report-path "${REPORTS}/${report_index}.json" \
@@ -309,18 +391,25 @@ scan_commit_messages() {
       exit 2
     fi
     if [[ -s "${REPORTS}/${report_index}.json" ]]; then
-      python3 - "${REPORTS}/${report_index}.json" "commit:${sha:0:12}" <<'PY'
+      if ! python3 - "${REPORTS}/${report_index}.json" "commit:${sha:0:12}" <<'PY'
 import json
 import sys
 
 path, label = sys.argv[1], sys.argv[2]
-with open(path, encoding="utf-8") as handle:
-    rows = json.load(handle)
+try:
+    with open(path, encoding="utf-8") as handle:
+        rows = json.load(handle)
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"redaction-scan: FAIL — unreadable gitleaks report: {exc}", file=sys.stderr)
+    raise SystemExit(3)
 for row in rows:
     row["File"] = label
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(rows, handle)
 PY
+      then
+        exit 2
+      fi
     fi
     count=$((count + 1))
   done < <(git log --format=%H "${range}" 2>/dev/null || true)
@@ -335,51 +424,53 @@ if [[ -n "${COMMIT_RANGE}" ]]; then
 fi
 
 file_count=0
-while IFS= read -r -d '' path; do
-  [[ -z "${path}" ]] && continue
-  file_count=$((file_count + 1))
-  scan_path "${path}"
-done < <(list_scan_files)
+materialise_scan_tree
+scan_materialised_tree
 
 FINDINGS_FILE="${WORK_DIR}/findings.txt"
-python3 - "${REPORTS}" "${FINDINGS_FILE}" > /dev/null <<'PY'
+# Match text never leaves this process. Public CI logs get file, line, rule, and
+# description only — the gate must not print the value it exists to stop shipping.
+if ! python3 - "${REPORTS}" "${FINDINGS_FILE}" <<'PY'
 import json
 import pathlib
-import re
 import sys
 
 reports, out_path = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
-MASKS = (
-    (re.compile(r"(AKIA)[0-9A-Z]{16}"), r"\1****************"),
-    (re.compile(r"(gh[pousr]_)[A-Za-z0-9]{8,}"), r"\1********"),
-    (re.compile(r"(xox[baprs]-)[A-Za-z0-9-]{8,}"), r"\1********"),
-    (re.compile(r"(sk-ant-)[A-Za-z0-9_-]{8,}"), r"\1********"),
-    (re.compile(r"(sk-)[A-Za-z0-9]{8,}"), r"\1********"),
-    (re.compile(r"(Bearer )[A-Za-z0-9._-]{8,}"), r"\1********"),
-    (re.compile(r"""(=\s*["'])[^"']{8,}(["'])"""), r"\1***\2"),
-)
-
 lines = set()
 for report in sorted(reports.glob("*.json")):
     try:
-        rows = json.loads(report.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        continue
+        text = report.read_text(encoding="utf-8")
+        if not text.strip():
+            rows = []
+        else:
+            rows = json.loads(text)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"redaction-scan: FAIL — unreadable gitleaks report {report.name}: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(3)
+    if not isinstance(rows, list):
+        print(
+            f"redaction-scan: FAIL — gitleaks report {report.name} is not a JSON array",
+            file=sys.stderr,
+        )
+        raise SystemExit(3)
     for row in rows:
-        snippet = (row.get("Match") or "").strip()
-        for pattern, replacement in MASKS:
-            snippet = pattern.sub(replacement, snippet)
         lines.add(
-            "  {file}:{line}  [{rule}] {desc}  :: {snippet}".format(
+            "  {file}:{line}  [{rule}] {desc}".format(
                 file=row.get("File", "?"),
                 line=row.get("StartLine", 0),
                 rule=row.get("RuleID", "?"),
                 desc=row.get("Description", ""),
-                snippet=snippet[:160],
             )
         )
 out_path.write_text("".join(f"{line}\n" for line in sorted(lines)), encoding="utf-8")
 PY
+then
+  echo "redaction-scan: FAIL — could not aggregate findings (undecidable; fail-closed)" >&2
+  exit 2
+fi
 
 FINDINGS="$(wc -l < "${FINDINGS_FILE}" | tr -d ' ')"
 

@@ -98,36 +98,31 @@ description = "Internal or corp hostname"
 regex = '''\b[A-Za-z0-9._-]+\.(internal|corp|local)\b'''
 
 [allowlist]
-# A line naming a placeholder is documentation, not exposure.
+# Exact known-fake fixture strings only. Broad placeholder words (todo, xxx,
+# dummy, …) must never excuse a whole line: a real credential sharing a line
+# with those words would pass. Path exemptions below cover files whose whole
+# purpose is to carry patterns or synthetic fixtures.
 regexTarget = "line"
 regexes = [
-  '''(?i)example\.com''',
-  '''(?i)example\-product''',
-  '''(?i)your_api_key''',
-  '''(?i)your\-api\-key''',
-  '''(?i)changeme''',
-  '''(?i)placeholder''',
-  '''(?i)redacted''',
-  '''(?i)xxx''',
-  '''(?i)todo''',
-  '''(?i)insert_''',
-  '''(?i)replace_me''',
-  '''(?i)dummy''',
-  '''(?i)fake_''',
-  '''(?i)test_secret''',
-  '''(?i)sk\-test\-''',
-  '''(?i)sk\-ant\-api03\-test''',
+  # Whole-line / value fixtures used in docs and tests as non-secrets.
+  '''(?i)AKIAIOSFODNN7EXAMPLE''',
   '''(?i)ghp_example''',
   '''(?i)xoxb\-example''',
-  '''(?i)AKIAIOSFODNN7EXAMPLE''',
+  '''(?i)sk\-test\-''',
+  '''(?i)sk\-ant\-api03\-test''',
+  '''(?i)your_api_key''',
+  '''(?i)your\-api\-key''',
   '''(?i)not\-a\-real''',
   '''(?i)sample\ only''',
+  '''(?i)example\.com''',
+  '''(?i)example\-product''',
 ]
 paths = [
-  # Files whose whole purpose is to carry patterns.
+  # Files whose whole purpose is to carry patterns or synthetic fixtures.
   '''scripts/redaction-scan\.sh''',
   '''scripts/redaction-allowlist\.txt''',
   '''config/gitleaks\.toml''',
+  '''tests/redaction-gate/''',
   # Build products and local worktree tooling.
   '''__pycache__/''',
   '''\.pyc$''',
