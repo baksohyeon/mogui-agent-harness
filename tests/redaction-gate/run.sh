@@ -171,37 +171,51 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# P2: malformed gitleaks report must exit 2 (exercise aggregator directly).
+# P2: malformed gitleaks report must make the scanner exit 2 (fail-closed).
 # ---------------------------------------------------------------------------
-echo "-- P2: unreadable report exits 2 via aggregator contract"
-# The aggregator is inline in the scanner; simulate by running the same
-# fail-closed python used there against a broken report directory.
-BROKEN="${WORKDIR}/broken-reports"
-mkdir -p "${BROKEN}"
-printf '{not-json\n' > "${BROKEN}/1.json"
+echo "-- P2: unreadable report makes scanner exit 2"
+REPO="${WORKDIR}/bad-report"
+make_fixture_repo "${REPO}"
+FAKE_BIN="${WORKDIR}/fake-gitleaks-bin"
+mkdir -p "${FAKE_BIN}"
+# gitleaks that writes a malformed report and exits 0 (findings path with
+# --exit-code 0). The scanner must treat unreadable JSON as undecidable exit 2.
+cat > "${FAKE_BIN}/gitleaks" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "version" ]]; then
+  echo "8.30.1"
+  exit 0
+fi
+report=""
+args=("$@")
+for i in "${!args[@]}"; do
+  if [[ "${args[$i]}" == "--report-path" ]]; then
+    report="${args[$((i + 1))]:-}"
+  fi
+done
+if [[ -z "${report}" ]]; then
+  echo "fake-gitleaks: missing --report-path" >&2
+  exit 2
+fi
+printf '{not-json\n' > "${report}"
+exit 0
+EOF
+chmod +x "${FAKE_BIN}/gitleaks"
 set +e
-python3 - "${BROKEN}" "${WORKDIR}/findings.txt" <<'PY' 2>/dev/null
-import json
-import pathlib
-import sys
-
-reports, out_path = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
-for report in sorted(reports.glob("*.json")):
-    try:
-        text = report.read_text(encoding="utf-8")
-        rows = json.loads(text) if text.strip() else []
-    except (OSError, json.JSONDecodeError):
-        raise SystemExit(3)
-    if not isinstance(rows, list):
-        raise SystemExit(3)
-out_path.write_text("", encoding="utf-8")
-PY
+OUT="$(
+  cd "${REPO}"
+  PATH="${FAKE_BIN}:/usr/bin:/bin:/usr/local/bin" \
+    env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG \
+    bash scripts/redaction-scan.sh 2>&1
+)"
 EC=$?
 set -e
-if [[ "${EC}" -eq 3 ]]; then
-  ok "malformed report raises undecidable status"
+if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"unreadable"* || "${OUT}" == *"undecidable"* || "${OUT}" == *"aggregate"* ]]; then
+  ok "malformed gitleaks report -> scanner exit 2"
 else
-  bad "malformed report expected status 3 from aggregator (got ${EC})"
+  bad "malformed report expected scanner exit 2 (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
 # ---------------------------------------------------------------------------
@@ -210,44 +224,38 @@ fi
 echo "-- P2: missing python3 exits 2"
 REPO="${WORKDIR}/nopy"
 make_fixture_repo "${REPO}"
-BIN="${WORKDIR}/bin"
-mkdir -p "${BIN}"
-# Shadow python3 with nothing; keep gitleaks and the rest of PATH.
-# Provide a fake gitleaks so the python check is what we hit second... actually
-# scanner checks gitleaks first then python3. Keep real gitleaks on PATH.
-set +e
-OUT="$(
-  cd "${REPO}"
-  PATH="${BIN}:/usr/bin:/bin:$(dirname "$(command -v gitleaks)")" \
-    env -u REDACTION_EXTRA_PATTERNS \
-    bash -c '
-      # Remove python3 from PATH by wrapping a PATH without it.
-      cleaned=()
-      IFS=:
-      for p in $PATH; do
-        if [[ -x "$p/python3" ]]; then
-          continue
-        fi
-        cleaned+=("$p")
-      done
-      export PATH=$(IFS=:; echo "${cleaned[*]}")
-      # Ensure gitleaks still found
-      command -v gitleaks >/dev/null || exit 99
-      command -v python3 >/dev/null && exit 98
-      bash scripts/redaction-scan.sh
-    ' 2>&1
-)"
-EC=$?
-set -e
-if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"python3"* ]]; then
-  ok "missing python3 -> exit 2 with hint"
+MIN_BIN="${WORKDIR}/min-path"
+mkdir -p "${MIN_BIN}" "${WORKDIR}/tmp" "${WORKDIR}/empty-home"
+# Curated PATH: required tools only, no python3. Fail the test if python3 is
+# still resolvable — never pass as "could not scrub".
+for cmd in bash sh git gitleaks mktemp mkdir ln cp dirname basename cat rm tr wc \
+  sed grep head printf env uname cut sort find awk; do
+  src="$(command -v "${cmd}" 2>/dev/null || true)"
+  if [[ -n "${src}" && -x "${src}" ]]; then
+    ln -sf "${src}" "${MIN_BIN}/${cmd}"
+  fi
+done
+if [[ ! -x "${MIN_BIN}/gitleaks" || ! -x "${MIN_BIN}/git" || ! -x "${MIN_BIN}/bash" ]]; then
+  bad "missing python3 test could not build minimal PATH (need gitleaks, git, bash)"
+elif PATH="${MIN_BIN}" command -v python3 >/dev/null 2>&1; then
+  bad "missing python3 test still resolves python3 on curated PATH — not testing the branch"
 else
-  # PATH scrubbing is host-dependent; accept exit 2 from any clear fail-closed path
-  # when python3 is genuinely gone, otherwise skip rather than flake.
-  if ! command -v python3 >/dev/null 2>&1; then
-    bad "missing python3 expected exit 2 (got ${EC})"
+  set +e
+  OUT="$(
+    cd "${REPO}"
+    env -i \
+      PATH="${MIN_BIN}" \
+      HOME="${WORKDIR}/empty-home" \
+      TMPDIR="${WORKDIR}/tmp" \
+      bash scripts/redaction-scan.sh 2>&1
+  )"
+  EC=$?
+  set -e
+  if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"python3"* ]]; then
+    ok "missing python3 -> exit 2 with hint"
   else
-    ok "missing python3 check present (host cannot scrub python3 from PATH; code path reviewed)"
+    bad "missing python3 expected exit 2 with hint (got exit=${EC})"
+    echo "${OUT}" | sed 's/^/    /' >&2
   fi
 fi
 
@@ -319,6 +327,30 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# P2: .gitleaksignore fingerprints still suppress after materialised scan.
+# ---------------------------------------------------------------------------
+echo "-- P2: .gitleaksignore uses repo-relative fingerprints"
+REPO="${WORKDIR}/ignore-fp"
+make_fixture_repo "${REPO}"
+printf 'path %s\n' "${SYN_HOME}" > "${REPO}/ignored-leak.txt"
+git -C "${REPO}" add ignored-leak.txt
+git -C "${REPO}" commit -q -m "plant"
+# Fingerprint shape measured from gitleaks dir .: path:rule:line
+printf 'ignored-leak.txt:home_path:1\n' > "${REPO}/.gitleaksignore"
+git -C "${REPO}" add .gitleaksignore
+git -C "${REPO}" commit -q -m "ignore"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
+  ok ".gitleaksignore suppresses finding via repo-relative fingerprint"
+else
+  bad ".gitleaksignore should yield exit 0 (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
 # Owner: bare synthetic UUID is blocked by uuid_session.
 # ---------------------------------------------------------------------------
 echo "-- Owner: synthetic UUID is blocked"
@@ -334,7 +366,8 @@ set -e
 if [[ "${EC}" -eq 1 ]] \
   && [[ "${OUT}" == *"[uuid_session]"* ]] \
   && [[ "${OUT}" != *"${SYN_UUID}"* ]] \
-  && [[ "${OUT}" == *"uuid_session=bare-8-4-4-4-12-hex"* ]]; then
+  && [[ "${OUT}" == *"uuid_session=bare-8-4-4-4-12-hex"* ]] \
+  && [[ "${OUT}" == *"path-excused="* ]]; then
   ok "synthetic UUID blocked (exit 1, rule named, value redacted, scope line present)"
 else
   bad "expected exit 1 uuid_session without raw UUID (got exit=${EC})"

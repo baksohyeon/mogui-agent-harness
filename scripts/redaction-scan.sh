@@ -32,10 +32,8 @@
 #
 # Coverage disclosure (always printed): this gate states what is in scope and
 # what is not, the same way commit-messages=not-scanned already does. The
-# uuid_session rule catches bare 8-4-4-4-12 hex UUID shapes in scanned content;
-# it does not catch angle-bracket placeholders (<tracker-id>, <session-id>),
-# and path-excused trees for that rule (tests/, docs/*/examples/, fixtures/)
-# are out of its reach by design.
+# uuid_session rule catches bare 8-4-4-4-12 hex UUID shapes; placeholders and
+# path exceptions printed on the scope line are read from config/gitleaks.toml.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -332,25 +330,38 @@ scan_materialised_tree() {
     printf '[]\n' > "${report_path}"
     return 0
   fi
-  if ! gitleaks dir "${SCAN_TREE}" \
-    --config "${CONFIG}" \
-    --no-banner \
-    --redact \
-    --exit-code 0 \
-    --report-format json \
-    --report-path "${report_path}" \
-    >/dev/null 2>&1; then
+  # Scan from inside the materialised tree with "." so File and Fingerprint are
+  # repository-relative (leak.txt:rule:1), matching .gitleaksignore entries.
+  # Passing the absolute SCAN_TREE path makes fingerprints use the temp root and
+  # silently disables every existing exemption — measured, not theoretical.
+  # Point --gitleaks-ignore-path at the real checkout so the repo's ignore file
+  # applies even though the engine cwd is the private tree.
+  if ! (
+    cd "${SCAN_TREE}"
+    gitleaks dir . \
+      --config "${CONFIG}" \
+      --gitleaks-ignore-path "${REPO_ROOT}" \
+      --no-banner \
+      --redact \
+      --exit-code 0 \
+      --report-format json \
+      --report-path "${report_path}"
+  ) >/dev/null 2>&1; then
     echo "redaction-scan: FAIL — gitleaks failed on materialised scan tree (engine error, not a finding)" >&2
     exit 2
   fi
-  # Rewrite absolute temp paths back to repository-relative paths so findings
-  # point at the source layout, never at the private materialisation tree.
+  # Normalize paths and fingerprints to repo-relative form. Match both the
+  # literal SCAN_TREE string the engine was given and its resolved form so
+  # macOS /var vs /private/var (and similar symlink roots) cannot leave a
+  # temp-path prefix in place. Any remaining absolute path is undecidable.
   if ! python3 - "${report_path}" "${SCAN_TREE}" <<'PY'
 import json
+import os
 import sys
 from pathlib import Path
 
-report_path, scan_tree = Path(sys.argv[1]), Path(sys.argv[2]).resolve()
+report_path = Path(sys.argv[1])
+scan_tree_arg = sys.argv[2]
 if not report_path.exists() or report_path.stat().st_size == 0:
     report_path.write_text("[]\n", encoding="utf-8")
     raise SystemExit(0)
@@ -362,13 +373,54 @@ except (OSError, json.JSONDecodeError) as exc:
 if not isinstance(rows, list):
     print("redaction-scan: FAIL — gitleaks report is not a JSON array", file=sys.stderr)
     raise SystemExit(1)
-prefix = str(scan_tree) + "/"
+
+prefixes = []
+for candidate in (scan_tree_arg, os.path.realpath(scan_tree_arg), str(Path(scan_tree_arg).resolve())):
+    if not candidate:
+        continue
+    for form in (candidate, candidate.rstrip("/") + "/"):
+        if form not in prefixes:
+            prefixes.append(form)
+
+
+def to_repo_relative(path: str) -> str:
+    if not path or path == ".":
+        return path or "."
+    for prefix in prefixes:
+        if path == prefix.rstrip("/"):
+            return "."
+        if prefix.endswith("/") and path.startswith(prefix):
+            return path[len(prefix) :]
+        if not prefix.endswith("/") and path.startswith(prefix + "/"):
+            return path[len(prefix) + 1 :]
+    return path
+
+
 for row in rows:
-    file_path = row.get("File") or ""
-    if file_path.startswith(prefix):
-        row["File"] = file_path[len(prefix):]
-    elif file_path == str(scan_tree):
-        row["File"] = "."
+    file_path = to_repo_relative(row.get("File") or "")
+    if file_path.startswith("/") or (len(file_path) > 1 and file_path[1] == ":"):
+        print(
+            "redaction-scan: FAIL — finding path still absolute after rewrite; "
+            "cannot map to repository path for ignore fingerprints",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    row["File"] = file_path
+    fingerprint = row.get("Fingerprint") or ""
+    if fingerprint:
+        # Fingerprint is "path:rule:line" (and optional commit). Rewrite only the
+        # path segment(s) before the rule id when the engine left a temp prefix.
+        parts = fingerprint.split(":")
+        if len(parts) >= 3:
+            # rule id is the segment that matches RuleID when present; path may
+            # itself contain colons on Windows. Prefer RuleID from the row.
+            rule = row.get("RuleID") or ""
+            if rule and rule in parts:
+                idx = parts.index(rule)
+                path_part = to_repo_relative(":".join(parts[:idx]))
+                row["Fingerprint"] = ":".join([path_part, *parts[idx:]])
+            else:
+                row["Fingerprint"] = to_repo_relative(parts[0]) + ":" + ":".join(parts[1:])
 report_path.write_text(json.dumps(rows), encoding="utf-8")
 PY
   then
@@ -482,16 +534,64 @@ fi
 FINDINGS="$(wc -l < "${FINDINGS_FILE}" | tr -d ' ')"
 
 # Scope line: always printed so a green exit cannot hide what was not covered.
-# uuid_session: in-scope = bare 8-4-4-4-12 hex; out-of-scope = <tracker-id> /
-# <session-id> placeholders and the rule's path allowlist (tests/, docs examples,
-# fixtures/). commit-messages stay not-scanned unless a range is requested.
-SCOPE_LINE="redaction-scan: scope — commit-messages=${COMMIT_MESSAGES_SCANNED} uuid_session=bare-8-4-4-4-12-hex (placeholders=<tracker-id>|<session-id> out-of-scope; path-excused=tests/,docs/*/examples/,fixtures/)"
+# uuid_session path exceptions are read from the active config (rule allowlist),
+# not hard-coded here, so the printed scope cannot drift from what the engine uses.
+# Written to a file rather than captured via $(heredoc): nested quoted heredocs
+# inside command substitution trip bash 3.2 quote parsing on macOS.
+SCOPE_FILE="${WORK_DIR}/scope.txt"
+if ! python3 - "${CONFIG}" "${COMMIT_MESSAGES_SCANNED}" "${SCOPE_FILE}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+config_path, commit_messages, out_path = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+text = config_path.read_text(encoding="utf-8")
+# Isolate only the uuid_session [[rules]] block (not every rule before it).
+# Path exceptions and documented placeholders come from that block alone.
+paths = []
+placeholders = []
+marker = 'id = "uuid_session"'
+id_at = text.find(marker)
+if id_at >= 0:
+    start = text.rfind("[[rules]]", 0, id_at)
+    if start < 0:
+        start = id_at
+    rest = text[start + 2 :]
+    next_rule = rest.find("\n[[rules]]")
+    next_allow = rest.find("\n[allowlist]")
+    end_rel = len(rest)
+    for candidate in (next_rule, next_allow):
+        if candidate >= 0:
+            end_rel = min(end_rel, candidate)
+    block = text[start : start + 2 + end_rel]
+    paths_block = re.search(r"paths\s*=\s*\[(.*?)\]", block, flags=re.S)
+    if paths_block:
+        triple = chr(39) * 3
+        found = re.findall(
+            triple + r"(.*?)" + triple + r"|\"(.*?)\"",
+            paths_block.group(1),
+        )
+        paths = [a or b for a, b in found]
+    placeholders = sorted(set(re.findall(r"<[A-Za-z0-9_-]+>", block)))
+path_note = ",".join(paths) if paths else "none"
+ph_note = "|".join(placeholders) if placeholders else "angle-bracket-forms"
+line = (
+    "redaction-scan: scope — "
+    f"commit-messages={commit_messages} "
+    "uuid_session=bare-8-4-4-4-12-hex "
+    f"(placeholders={ph_note} out-of-scope; path-excused={path_note})"
+)
+out_path.write_text(line + "\n", encoding="utf-8")
+print(line)
+PY
+then
+  echo "redaction-scan: FAIL — could not build scope line from config (undecidable)" >&2
+  exit 2
+fi
 
 if [[ "${VERBOSE}" -eq 1 ]]; then
   echo "redaction-scan: mode=${MODE} range=${RANGE:-none} files=${file_count} commit-messages=${COMMIT_MESSAGES_SCANNED} org-rules=${EXTRA_RULE_COUNT} config=$(basename "${CONFIG}") engine=$(gitleaks version 2>/dev/null | head -1)"
 fi
-
-echo "${SCOPE_LINE}"
 
 if [[ "${FINDINGS}" -gt 0 ]]; then
   echo "redaction-scan: FAIL — ${FINDINGS} finding(s) (fail-closed)" >&2
