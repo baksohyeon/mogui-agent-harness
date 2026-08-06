@@ -1,0 +1,12 @@
+# Redaction scan allowlist (fail-closed scanner: scripts/redaction-scan.sh)
+#
+# The previous line/path allowlist format is retired. Non-comment entries here
+# cause the scanner to exit 2 so exemptions cannot silently stop applying.
+#
+# Prefer:
+#   .gitleaksignore fingerprint for one finding
+#   an allowlist in config/gitleaks.toml for a whole class
+#
+# Default synthetic home prefixes excused by the home_path rule itself:
+#   /Users/dev /Users/user /Users/example /Users/runner /Users/you
+#   /home/dev /home/user /home/example /home/runner /home/you
