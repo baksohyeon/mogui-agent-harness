@@ -307,24 +307,32 @@ materialise_scan_tree() {
         fi
         dest_dir="$(dirname "${SCAN_TREE}/${path}")"
         mkdir -p "${dest_dir}"
-        # Index blob bytes, not the worktree file. gitlink/submodule and other
-        # non-blob index entries can pass cat-file -e then fail show; that is
-        # undecidable, not a clean skip.
-        if ! git show ":${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
+        # Only blob index entries are file content. gitlinks/submodules and
+        # other types can make `git show` succeed with non-file metadata; that
+        # must not materialise as a clean scan of "file content".
+        if [[ "$(git cat-file -t ":${path}" 2>/dev/null || true)" != "blob" ]] \
+          || ! git show ":${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
           echo "redaction-scan: FAIL — cannot read index blob for ${path}" >&2
           exit 2
         fi
         ;;
       *)
-        # Skip symlinks: -f follows them and would scan the target under the
-        # link's repository path. Tracked link entries are out of tree bytes.
-        [[ -L "${path}" ]] && continue
-        [[ -f "${path}" ]] || continue
         dest_dir="$(dirname "${SCAN_TREE}/${path}")"
         mkdir -p "${dest_dir}"
-        # Hardlink when possible to avoid copying large trees; fall back to cp.
-        if ! ln "${path}" "${SCAN_TREE}/${path}" 2>/dev/null; then
-          cp "${path}" "${SCAN_TREE}/${path}"
+        if [[ -L "${path}" ]]; then
+          # Do not follow the link into target file bytes. Materialise the link
+          # text itself (readlink) as a regular scan file so secrets in the
+          # target path string (e.g. absolute home paths) still hit the gate.
+          if ! readlink "${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
+            echo "redaction-scan: FAIL — cannot read symlink text for ${path}" >&2
+            exit 2
+          fi
+        else
+          [[ -f "${path}" ]] || continue
+          # Hardlink when possible to avoid copying large trees; fall back to cp.
+          if ! ln "${path}" "${SCAN_TREE}/${path}" 2>/dev/null; then
+            cp "${path}" "${SCAN_TREE}/${path}"
+          fi
         fi
         ;;
     esac

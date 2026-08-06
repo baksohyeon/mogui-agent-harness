@@ -464,7 +464,7 @@ OUT="$(
 EC=$?
 set -e
 if [[ "${EC}" -eq 0 ]] \
-  && [[ "${OUT}" == *"path-excused=tests/"* || "${OUT}" == *"path-excused=tests/,docs"* ]] \
+  && [[ "${OUT}" == *"path-excused=tests/"* ]] \
   && [[ "${OUT}" != *"path-excused=none"* ]]; then
   ok "org extend scope line keeps base uuid_session path-excused"
 else
@@ -503,24 +503,60 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Tracked symlink is skipped (not followed into target content).
+# Tracked symlink: scan link text, do not follow target file bytes.
 # ---------------------------------------------------------------------------
-echo "-- tracked symlink is not scanned as target content"
-REPO="${WORKDIR}/symlink-skip"
+echo "-- tracked symlink scans link text, not target file"
+REPO="${WORKDIR}/symlink-text"
 make_fixture_repo "${REPO}"
-printf 'path %s\n' "${SYN_HOME}" > "${REPO}/target-secret.txt"
-ln -s target-secret.txt "${REPO}/link-secret.txt"
-# Only track the symlink; leave target untracked so a follow would be the only hit.
-git -C "${REPO}" add link-secret.txt
-git -C "${REPO}" commit -q -m "symlink only"
+# Relative link text has no secret shape -> clean.
+ln -s ordinary-relative-name "${REPO}/safe-link.txt"
+git -C "${REPO}" add safe-link.txt
+git -C "${REPO}" commit -q -m "safe symlink"
 set +e
 OUT="$(run_scan "${REPO}" 2>&1)"
 EC=$?
 set -e
 if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
-  ok "tracked symlink skipped (target content not scanned under link path)"
+  ok "relative symlink text without secret shape -> exit 0"
 else
-  bad "symlink-only tree expected exit 0 (got ${EC})"
+  bad "safe symlink expected exit 0 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+# Absolute home path as the link text itself must hit home_path.
+ln -s "${SYN_HOME}" "${REPO}/home-link.txt"
+git -C "${REPO}" add home-link.txt
+git -C "${REPO}" commit -q -m "home symlink text"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 1 ]] && [[ "${OUT}" == *"[home_path]"* ]]; then
+  ok "symlink target string with synthetic home path is blocked"
+else
+  bad "home-path symlink text expected exit 1 home_path (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Staged non-blob index entry (gitlink) is undecidable, exit 2.
+# ---------------------------------------------------------------------------
+echo "-- staged gitlink fails closed"
+REPO="${WORKDIR}/gitlink-staged"
+make_fixture_repo "${REPO}"
+# 160000 mode is a gitlink (submodule pointer), not a blob.
+SHA="$(git -C "${REPO}" rev-parse HEAD)"
+git -C "${REPO}" update-index --add --cacheinfo "160000,${SHA},vendor/lib"
+set +e
+OUT="$(
+  cd "${REPO}"
+  "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh --staged 2>&1
+)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"index blob"* || "${OUT}" == *"cannot read"* ]]; then
+  ok "staged gitlink -> exit 2"
+else
+  bad "staged gitlink expected exit 2 (got ${EC})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
