@@ -323,7 +323,9 @@ materialise_scan_tree() {
           # Do not follow the link into target file bytes. Materialise the link
           # text itself (readlink) as a regular scan file so secrets in the
           # target path string (e.g. absolute home paths) still hit the gate.
-          if ! readlink "${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
+          # -- ends options so a tracked name like "--help" is not parsed as a
+          # readlink flag (which would skip the link text entirely).
+          if ! readlink -- "${path}" > "${SCAN_TREE}/${path}" 2>/dev/null; then
             echo "redaction-scan: FAIL — cannot read symlink text for ${path}" >&2
             exit 2
           fi

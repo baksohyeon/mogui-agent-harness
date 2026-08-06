@@ -537,6 +537,44 @@ else
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
+# Do not follow: link text is safe, real target file holds a secret and is not tracked.
+echo "-- tracked symlink does not follow into target file bytes"
+REPO="${WORKDIR}/symlink-nofollow"
+make_fixture_repo "${REPO}"
+printf 'path %s\n' "${SYN_HOME}" > "${REPO}/real-target-secret.txt"
+ln -s real-target-secret.txt "${REPO}/points-at-secret.txt"
+# Track only the symlink. Following would scan the secret target and fail.
+git -C "${REPO}" add points-at-secret.txt
+git -C "${REPO}" commit -q -m "symlink nofollow"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
+  ok "symlink to secret file does not scan target bytes (exit 0 on link text only)"
+else
+  bad "nofollow symlink expected exit 0 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# Option-like symlink name must still yield its link text (readlink --).
+echo "-- symlink named like an option still scans link text"
+REPO="${WORKDIR}/symlink-optname"
+make_fixture_repo "${REPO}"
+ln -s "${SYN_HOME}" "${REPO}/--help"
+git -C "${REPO}" add -- "--help"
+git -C "${REPO}" commit -q -m "optname symlink"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 1 ]] && [[ "${OUT}" == *"[home_path]"* ]]; then
+  ok "symlink named --help still scans link text (exit 1)"
+else
+  bad "option-named symlink expected exit 1 home_path (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
 # ---------------------------------------------------------------------------
 # Staged non-blob index entry (gitlink) is undecidable, exit 2.
 # ---------------------------------------------------------------------------
@@ -553,7 +591,7 @@ OUT="$(
 )"
 EC=$?
 set -e
-if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"index blob"* || "${OUT}" == *"cannot read"* ]]; then
+if [[ "${EC}" -eq 2 ]] && { [[ "${OUT}" == *"index blob"* ]] || [[ "${OUT}" == *"cannot read"* ]]; }; then
   ok "staged gitlink -> exit 2"
 else
   bad "staged gitlink expected exit 2 (got ${EC})"
