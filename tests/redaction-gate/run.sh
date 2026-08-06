@@ -9,9 +9,11 @@ CONFIG="${ROOT}/config/gitleaks.toml"
 
 # Synthetic fixtures only. Path allowlist covers this tests/ tree so the
 # fixtures here do not trip the repository's own gate when scanned.
+# UUID is a made-up hex shape, never a live session identifier.
 SYN_HOME="/Users/exampleuser/project/notes"
 SYN_TOKEN="ghp_$(printf 'A%.0s' {1..36})"
 SYN_AWS="AKIA$(printf 'Z%.0s' {1..16})"
+SYN_UUID="aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 
 pass=0
 fail=0
@@ -313,6 +315,49 @@ if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"--allowlist"* ]]; then
   ok "--allowlist without value -> exit 2"
 else
   bad "--allowlist without value expected exit 2 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Owner: bare synthetic UUID is blocked by uuid_session.
+# ---------------------------------------------------------------------------
+echo "-- Owner: synthetic UUID is blocked"
+REPO="${WORKDIR}/uuid-block"
+make_fixture_repo "${REPO}"
+printf 'session %s\n' "${SYN_UUID}" > "${REPO}/session.txt"
+git -C "${REPO}" add session.txt
+git -C "${REPO}" commit -q -m "plant uuid"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 1 ]] \
+  && [[ "${OUT}" == *"[uuid_session]"* ]] \
+  && [[ "${OUT}" != *"${SYN_UUID}"* ]] \
+  && [[ "${OUT}" == *"uuid_session=bare-8-4-4-4-12-hex"* ]]; then
+  ok "synthetic UUID blocked (exit 1, rule named, value redacted, scope line present)"
+else
+  bad "expected exit 1 uuid_session without raw UUID (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Owner: angle-bracket placeholders pass (not bare UUID shape).
+# ---------------------------------------------------------------------------
+echo "-- Owner: <tracker-id> and <session-id> placeholders pass"
+REPO="${WORKDIR}/uuid-placeholder"
+make_fixture_repo "${REPO}"
+printf 'tracker <tracker-id> session <session-id>\n' > "${REPO}/placeholders.txt"
+git -C "${REPO}" add placeholders.txt
+git -C "${REPO}" commit -q -m "placeholders"
+set +e
+OUT="$(run_scan "${REPO}" 2>&1)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ "${OUT}" == *"0 findings"* ]]; then
+  ok "placeholder forms <tracker-id>/<session-id> pass"
+else
+  bad "placeholders expected exit 0 (got exit=${EC})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 

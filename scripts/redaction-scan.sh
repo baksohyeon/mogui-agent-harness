@@ -29,6 +29,13 @@
 #
 # Exemptions use gitleaks' own mechanisms: a .gitleaksignore fingerprint for one
 # finding, or config/gitleaks.toml for a whole class.
+#
+# Coverage disclosure (always printed): this gate states what is in scope and
+# what is not, the same way commit-messages=not-scanned already does. The
+# uuid_session rule catches bare 8-4-4-4-12 hex UUID shapes in scanned content;
+# it does not catch angle-bracket placeholders (<tracker-id>, <session-id>),
+# and path-excused trees for that rule (tests/, docs/*/examples/, fixtures/)
+# are out of its reach by design.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -474,9 +481,17 @@ fi
 
 FINDINGS="$(wc -l < "${FINDINGS_FILE}" | tr -d ' ')"
 
+# Scope line: always printed so a green exit cannot hide what was not covered.
+# uuid_session: in-scope = bare 8-4-4-4-12 hex; out-of-scope = <tracker-id> /
+# <session-id> placeholders and the rule's path allowlist (tests/, docs examples,
+# fixtures/). commit-messages stay not-scanned unless a range is requested.
+SCOPE_LINE="redaction-scan: scope — commit-messages=${COMMIT_MESSAGES_SCANNED} uuid_session=bare-8-4-4-4-12-hex (placeholders=<tracker-id>|<session-id> out-of-scope; path-excused=tests/,docs/*/examples/,fixtures/)"
+
 if [[ "${VERBOSE}" -eq 1 ]]; then
   echo "redaction-scan: mode=${MODE} range=${RANGE:-none} files=${file_count} commit-messages=${COMMIT_MESSAGES_SCANNED} org-rules=${EXTRA_RULE_COUNT} config=$(basename "${CONFIG}") engine=$(gitleaks version 2>/dev/null | head -1)"
 fi
+
+echo "${SCOPE_LINE}"
 
 if [[ "${FINDINGS}" -gt 0 ]]; then
   echo "redaction-scan: FAIL — ${FINDINGS} finding(s) (fail-closed)" >&2

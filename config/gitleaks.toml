@@ -97,6 +97,24 @@ id = "internal_host"
 description = "Internal or corp hostname"
 regex = '''\b[A-Za-z0-9._-]+\.(internal|corp|local)\b'''
 
+[[rules]]
+id = "uuid_session"
+description = "Bare UUID or session-shaped identifier (8-4-4-4-12 hex)"
+# Catches raw UUID forms that operators historically omitted from hand-chosen
+# checklists (absolute paths, usernames, pid, tty, term_, folder: prefixes).
+# Does not match angle-bracket placeholders such as <tracker-id> or <session-id>.
+regex = '''(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b'''
+
+  # Narrow path exceptions only — never a global line allowlist (that form
+  # already let real credentials share a line with placeholder words).
+  # Legitimate UUID examples live in tests and explicit docs example trees.
+  [rules.allowlist]
+  paths = [
+    '''tests/''',
+    '''docs/.*/examples/''',
+    '''fixtures/''',
+  ]
+
 [allowlist]
 # Exact known-fake fixture strings only. Broad placeholder words (todo, xxx,
 # dummy, …) must never excuse a whole line: a real credential sharing a line
