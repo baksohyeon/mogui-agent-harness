@@ -1,3 +1,5 @@
+> Snapshot notice: This survey records observations made on 2026-08-05; its scope ends at that date. Since then, the redaction gate landed as PR #8, changing the harness's observability and verification surfaces and file inventory. For the current state, consult the latest `main` tree and its landed changes.
+
 # Survey: observability surface of mogui-agent-harness (before any move-in)
 
 > English document. Investigation only — no skills moved, no README edited, no directories created.
