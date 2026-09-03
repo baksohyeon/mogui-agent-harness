@@ -81,6 +81,14 @@ run_scan_from_nested() {
   )
 }
 
+# Exercise the repository's local pre-commit lane, including its configured
+# gitleaks ruleset, in an isolated repository.
+run_hook_commit() {
+  local repo="$1"
+  shift
+  (cd "${repo}" && git commit "$@")
+}
+
 echo "== redaction-gate regression =="
 require_gitleaks
 WORKDIR="$(mktemp -d)"
@@ -595,6 +603,45 @@ if [[ "${EC}" -eq 2 ]] && { [[ "${OUT}" == *"index blob"* ]] || [[ "${OUT}" == *
   ok "staged gitlink -> exit 2"
 else
   bad "staged gitlink expected exit 2 (got ${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+echo "-- local hook: configured gitleaks lane blocks and clean commit passes"
+REPO="${WORKDIR}/local-hook"
+make_fixture_repo "${REPO}"
+git -C "${REPO}" config core.hooksPath "${ROOT}/.githooks"
+BASE_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
+mkdir -p "${REPO}/docs"
+printf 'aws %s\n' "${SYN_AWS}" > "${REPO}/docs/leaktest.md"
+git -C "${REPO}" add docs/leaktest.md
+set +e
+OUT="$(run_hook_commit "${REPO}" -m "synthetic leak" 2>&1)"
+EC=$?
+set -e
+AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
+if [[ "${EC}" -ne 0 ]] \
+  && [[ "${OUT}" == *"leaks found: 1"* ]] \
+  && [[ "${AFTER_HEAD}" == *"${BASE_HEAD}"* ]]; then
+  ok "local hook blocks synthetic AWS rule and leaves HEAD unmoved"
+else
+  bad "local hook expected non-zero commit, AWS finding, and unmoved HEAD (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+  echo "    HEAD before=${BASE_HEAD} after=${AFTER_HEAD}" >&2
+fi
+
+git -C "${REPO}" rm -q --cached docs/leaktest.md
+rm -f "${REPO}/docs/leaktest.md"
+printf 'benign documentation\n' > "${REPO}/docs/clean.md"
+git -C "${REPO}" add docs/clean.md
+set +e
+OUT="$(run_hook_commit "${REPO}" -m "benign docs" 2>&1)"
+EC=$?
+set -e
+AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
+if [[ "${EC}" -eq 0 ]] && [[ "${AFTER_HEAD}" != "${BASE_HEAD}" ]]; then
+  ok "local hook permits benign docs commit"
+else
+  bad "local hook expected benign docs commit to succeed (got exit=${EC})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
