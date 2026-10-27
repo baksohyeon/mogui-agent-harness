@@ -139,7 +139,11 @@ fi
 # 3) Gitleaks: detect hardcoded secrets (block).
 #    Protection that originally lived in .git/hooks/pre-commit, merged here to avoid losing it on the core.hooksPath switch.
 if command -v gitleaks >/dev/null 2>&1 && [[ -z "${SKIP_GITLEAKS:-}" ]]; then
-  if ! gitleaks protect --staged --no-banner --exit-code 1; then
+  if [[ ! -f "$REPO_ROOT/config/gitleaks.toml" ]]; then
+    echo "[gitleaks blocked] repository ruleset missing: config/gitleaks.toml"
+    exit 1
+  fi
+  if ! gitleaks protect --staged --config "$REPO_ROOT/config/gitleaks.toml" --no-banner --exit-code 1; then
     echo ""
     echo "[gitleaks blocked] secret detected."
     echo "  Fix the leak and commit again. If it is a false positive, add a 'gitleaks:allow' comment or update .gitleaksignore."
