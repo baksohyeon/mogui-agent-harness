@@ -59,6 +59,10 @@ make_fixture_repo() {
 # Host overrides that can change the ruleset or exit contract under test.
 SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG)
 
+# Same scrub, plus the hook-only bypass vars: a host that exports SKIP_GITLEAKS
+# or SKIP_AUDIT_LOG must not silently disable the lane under test.
+HOOK_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG)
+
 run_scan() {
   local repo="$1"
   shift
@@ -86,7 +90,7 @@ run_scan_from_nested() {
 run_hook_commit() {
   local repo="$1"
   shift
-  (cd "${repo}" && git commit "$@")
+  (cd "${repo}" && "${HOOK_ENV[@]}" git commit "$@")
 }
 
 echo "== redaction-gate regression =="
@@ -620,8 +624,9 @@ EC=$?
 set -e
 AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
 if [[ "${EC}" -ne 0 ]] \
-  && [[ "${OUT}" == *"leaks found: 1"* ]] \
-  && [[ "${AFTER_HEAD}" == *"${BASE_HEAD}"* ]]; then
+  && [[ "${OUT}" == *"redaction-scan: FAIL"* ]] \
+  && [[ "${OUT}" == *"[aws_access_key]"* ]] \
+  && [[ "${AFTER_HEAD}" == "${BASE_HEAD}" ]]; then
   ok "local hook blocks synthetic AWS rule and leaves HEAD unmoved"
 else
   bad "local hook expected non-zero commit, AWS finding, and unmoved HEAD (got exit=${EC})"
@@ -638,12 +643,49 @@ OUT="$(run_hook_commit "${REPO}" -m "benign docs" 2>&1)"
 EC=$?
 set -e
 AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
-if [[ "${EC}" -eq 0 ]] && [[ "${AFTER_HEAD}" != "${BASE_HEAD}" ]]; then
+if [[ "${EC}" -eq 0 ]] \
+  && [[ "${OUT}" == *"redaction-scan: OK"* ]] \
+  && [[ "${AFTER_HEAD}" != "${BASE_HEAD}" ]]; then
   ok "local hook permits benign docs commit"
 else
   bad "local hook expected benign docs commit to succeed (got exit=${EC})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
+BASE_HEAD="${AFTER_HEAD}"
+
+# ---------------------------------------------------------------------------
+# Owner: organization rules supplied via REDACTION_EXTRA_PATTERNS must still
+# block a commit through the local hook. This is the regression cubic named
+# on PR #9: an explicit --config on the hook's gitleaks call overrode
+# GITLEAKS_CONFIG and silently dropped organization coverage at commit time.
+# ---------------------------------------------------------------------------
+echo "-- local hook: organization rule supplied via REDACTION_EXTRA_PATTERNS blocks commit"
+ORG_RULES="${WORKDIR}/local-hook-org.rules"
+printf 'internal_handle|internal codename|ORGTESTHANDLE[0-9]+\n' > "${ORG_RULES}"
+mkdir -p "${REPO}/docs"
+printf 'internal codename ORGTESTHANDLE42\n' > "${REPO}/docs/orgtest.md"
+git -C "${REPO}" add docs/orgtest.md
+set +e
+OUT="$(
+  cd "${REPO}"
+  env -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG \
+    REDACTION_EXTRA_PATTERNS="${ORG_RULES}" \
+    git commit -m "org rule leak" 2>&1
+)"
+EC=$?
+set -e
+AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
+if [[ "${EC}" -ne 0 ]] \
+  && [[ "${OUT}" == *"[internal_handle]"* ]] \
+  && [[ "${AFTER_HEAD}" == "${BASE_HEAD}" ]]; then
+  ok "local hook blocks organization rule via REDACTION_EXTRA_PATTERNS, HEAD unmoved"
+else
+  bad "local hook expected organization rule to block commit with unmoved HEAD (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+  echo "    HEAD before=${BASE_HEAD} after=${AFTER_HEAD}" >&2
+fi
+git -C "${REPO}" rm -q --cached docs/orgtest.md 2>/dev/null || true
+rm -f "${REPO}/docs/orgtest.md"
 
 echo
 echo "redaction-gate: ${pass} passed, ${fail} failed"
