@@ -687,6 +687,38 @@ fi
 git -C "${REPO}" rm -q --cached docs/orgtest.md 2>/dev/null || true
 rm -f "${REPO}/docs/orgtest.md"
 
+# ---------------------------------------------------------------------------
+# Owner: an undecidable scan (exit 2) must still block the commit through
+# the local hook, with the hook's own "could not decide" message. No case
+# drove the scanner itself to exit 2 through the hook, so the hook's
+# non-exit-1 branch of its SCAN_EXIT check was untested.
+# ---------------------------------------------------------------------------
+echo "-- local hook: undecidable scan (exit 2) blocks commit"
+mkdir -p "${REPO}/docs"
+printf 'benign documentation for the undecidable case\n' > "${REPO}/docs/undecidable.md"
+git -C "${REPO}" add docs/undecidable.md
+set +e
+OUT="$(
+  cd "${REPO}"
+  env -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG \
+    REDACTION_EXTRA_PATTERNS="${WORKDIR}/bad-org.rules" \
+    git commit -m "undecidable scan" 2>&1
+)"
+EC=$?
+set -e
+AFTER_HEAD="$(git -C "${REPO}" rev-parse HEAD)"
+if [[ "${EC}" -ne 0 ]] \
+  && [[ "${OUT}" == *"could not decide"* ]] \
+  && [[ "${AFTER_HEAD}" == "${BASE_HEAD}" ]]; then
+  ok "local hook blocks undecidable scan (exit 2), HEAD unmoved"
+else
+  bad "local hook expected undecidable scan to block commit with unmoved HEAD (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+  echo "    HEAD before=${BASE_HEAD} after=${AFTER_HEAD}" >&2
+fi
+git -C "${REPO}" rm -q --cached docs/undecidable.md 2>/dev/null || true
+rm -f "${REPO}/docs/undecidable.md"
+
 echo
 echo "redaction-gate: ${pass} passed, ${fail} failed"
 if [[ "${fail}" -gt 0 ]]; then
