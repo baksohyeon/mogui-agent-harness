@@ -136,17 +136,27 @@ if [[ ${#WARNINGS[@]} -gt 0 ]]; then
   echo "   (not a block. See docs/wiki/_schema/frontmatter.md.)"
 fi
 
-# 3) Gitleaks: detect hardcoded secrets (block).
-#    Protection that originally lived in .git/hooks/pre-commit, merged here to avoid losing it on the core.hooksPath switch.
+# 3) Secret scan: route through the repository's own scanner instead of
+#    calling gitleaks directly here. This hook and CI are two callers of one
+#    lane; a hardcoded --config on this side would override the
+#    REDACTION_EXTRA_PATTERNS mechanism that scripts/redaction-scan.sh
+#    implements for supplying organization-specific rules outside version
+#    control.
+#
+#    Skips entirely when gitleaks is not on PATH: that population's commits
+#    went unscanned before this change too, and CI scans every push
+#    regardless of what a contributor has installed locally.
 if command -v gitleaks >/dev/null 2>&1 && [[ -z "${SKIP_GITLEAKS:-}" ]]; then
-  if [[ ! -f "$REPO_ROOT/config/gitleaks.toml" ]]; then
-    echo "[gitleaks blocked] repository ruleset missing: config/gitleaks.toml"
-    exit 1
-  fi
-  if ! gitleaks protect --staged --config "$REPO_ROOT/config/gitleaks.toml" --no-banner --exit-code 1; then
+  SCAN_EXIT=0
+  "$REPO_ROOT/scripts/redaction-scan.sh" --staged || SCAN_EXIT=$?
+  if [[ "$SCAN_EXIT" -ne 0 ]]; then
     echo ""
-    echo "[gitleaks blocked] secret detected."
-    echo "  Fix the leak and commit again. If it is a false positive, add a 'gitleaks:allow' comment or update .gitleaksignore."
+    if [[ "$SCAN_EXIT" -eq 1 ]]; then
+      echo "[redaction-scan blocked] secret detected."
+    else
+      echo "[redaction-scan blocked] exit $SCAN_EXIT: the gate could not decide. This is not a pass."
+    fi
+    echo "  Fix what is reported above, or exempt a false positive with a .gitleaksignore fingerprint, then commit again."
     echo "  Force skip (not recommended): SKIP_GITLEAKS=1 git commit"
     exit 1
   fi
