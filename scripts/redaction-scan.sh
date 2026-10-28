@@ -113,11 +113,11 @@ if [[ -z "${PYTHON}" ]]; then
   fi
 fi
 if ! command -v "${PYTHON}" >/dev/null 2>&1; then
-  echo "redaction-scan: FAIL — python3 is not on PATH; install Python 3 (e.g. brew install python or apt install python3)" >&2
+  echo "redaction-scan: FAIL - ${PYTHON} is not on PATH (python3, or REDACTION_PYTHON); install Python 3 (e.g. brew install python or apt install python3)" >&2
   exit 2
 fi
-if ! "${PYTHON}" -c 'import sys; sys.exit(0)' >/dev/null 2>&1; then
-  echo "redaction-scan: FAIL - could not decide: ${PYTHON} did not run a basic check" >&2
+if ! "${PYTHON}" -c 'import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
+  echo "redaction-scan: FAIL - could not decide: ${PYTHON} did not run a basic Python 3 check" >&2
   exit 2
 fi
 if [[ ! -f "${BASE_CONFIG}" ]]; then

@@ -57,11 +57,11 @@ make_fixture_repo() {
 }
 
 # Host overrides that can change the ruleset or exit contract under test.
-SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG)
+SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u REDACTION_PYTHON)
 
 # Same scrub, plus the hook-only bypass vars: a host that exports SKIP_GITLEAKS
 # or SKIP_AUDIT_LOG must not silently disable the lane under test.
-HOOK_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG)
+HOOK_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG -u REDACTION_PYTHON)
 
 run_scan() {
   local repo="$1"
@@ -157,14 +157,19 @@ chmod +x "${PY_SHIM}"
 set +e
 OUT="$(
   cd "${REPO}"
-  REDACTION_PYTHON="${PY_SHIM}" "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh 2>&1
+  "${SCAN_ENV[@]}" REDACTION_PYTHON="${PY_SHIM}" bash scripts/redaction-scan.sh 2>&1
 )"
 EC=$?
 set -e
-if [[ "${EC}" -eq 0 ]] && [[ -s "${PY_LOG}" ]]; then
-  ok "REDACTION_PYTHON shim is invoked and scan passes"
+# A clean tracked-mode scan calls the resolved interpreter 4 times: the
+# runnability probe, the materialised-tree normalizer, the findings merge,
+# and the scope-line builder. Fewer lines means some call site bypassed
+# REDACTION_PYTHON and fell back to a bare python3.
+PY_CALLS="$(wc -l < "${PY_LOG}" | tr -d ' ')"
+if [[ "${EC}" -eq 0 ]] && [[ "${PY_CALLS}" -eq 4 ]]; then
+  ok "REDACTION_PYTHON shim is invoked at every call site and scan passes"
 else
-  bad "REDACTION_PYTHON override expected exit 0 with shim invoked (got exit=${EC})"
+  bad "REDACTION_PYTHON override expected exit 0 with 4 shim calls (got exit=${EC}, calls=${PY_CALLS})"
   echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
@@ -181,7 +186,7 @@ chmod +x "${BAD_PY_SHIM}"
 set +e
 OUT="$(
   cd "${REPO}"
-  REDACTION_PYTHON="${BAD_PY_SHIM}" "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh 2>&1
+  "${SCAN_ENV[@]}" REDACTION_PYTHON="${BAD_PY_SHIM}" bash scripts/redaction-scan.sh 2>&1
 )"
 EC=$?
 set -e
