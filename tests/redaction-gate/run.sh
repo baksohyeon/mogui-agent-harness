@@ -57,11 +57,11 @@ make_fixture_repo() {
 }
 
 # Host overrides that can change the ruleset or exit contract under test.
-SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG)
+SCAN_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u REDACTION_PYTHON)
 
 # Same scrub, plus the hook-only bypass vars: a host that exports SKIP_GITLEAKS
 # or SKIP_AUDIT_LOG must not silently disable the lane under test.
-HOOK_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG)
+HOOK_ENV=(env -u REDACTION_EXTRA_PATTERNS -u REDACTION_REQUIRE_EXTRA -u GITLEAKS_CONFIG -u SKIP_GITLEAKS -u SKIP_AUDIT_LOG -u REDACTION_PYTHON)
 
 run_scan() {
   local repo="$1"
@@ -136,6 +136,65 @@ if [[ "${EC}" -eq 2 ]]; then
   ok "missing org rules file -> exit 2"
 else
   bad "missing org rules file expected exit 2 (got exit=${EC})"
+fi
+
+# ---------------------------------------------------------------------------
+# scanner: REDACTION_PYTHON override is used
+# ---------------------------------------------------------------------------
+echo "-- scanner: REDACTION_PYTHON override is used"
+REPO="${WORKDIR}/python-override"
+make_fixture_repo "${REPO}"
+REAL_PYTHON3="$(command -v python3)"
+PY_LOG="${REPO}/python-shim.log"
+PY_SHIM="${REPO}/python-shim.sh"
+: > "${PY_LOG}"
+cat > "${PY_SHIM}" <<EOF
+#!/usr/bin/env bash
+echo "called" >> "${PY_LOG}"
+exec "${REAL_PYTHON3}" "\$@"
+EOF
+chmod +x "${PY_SHIM}"
+set +e
+OUT="$(
+  cd "${REPO}"
+  "${SCAN_ENV[@]}" REDACTION_PYTHON="${PY_SHIM}" bash scripts/redaction-scan.sh 2>&1
+)"
+EC=$?
+set -e
+# A clean tracked-mode scan calls the resolved interpreter 4 times: the
+# runnability probe, the materialised-tree normalizer, the findings merge,
+# and the scope-line builder. Fewer lines means some call site bypassed
+# REDACTION_PYTHON and fell back to a bare python3.
+PY_CALLS="$(wc -l < "${PY_LOG}" | tr -d ' ')"
+if [[ "${EC}" -eq 0 ]] && [[ "${PY_CALLS}" -eq 4 ]]; then
+  ok "REDACTION_PYTHON shim is invoked at every call site and scan passes"
+else
+  bad "REDACTION_PYTHON override expected exit 0 with 4 shim calls (got exit=${EC}, calls=${PY_CALLS})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# scanner: unusable REDACTION_PYTHON exits 2
+# ---------------------------------------------------------------------------
+echo "-- scanner: unusable REDACTION_PYTHON exits 2"
+BAD_PY_SHIM="${REPO}/bad-python-shim.sh"
+cat > "${BAD_PY_SHIM}" <<'EOF'
+#!/usr/bin/env bash
+exit 7
+EOF
+chmod +x "${BAD_PY_SHIM}"
+set +e
+OUT="$(
+  cd "${REPO}"
+  "${SCAN_ENV[@]}" REDACTION_PYTHON="${BAD_PY_SHIM}" bash scripts/redaction-scan.sh 2>&1
+)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"could not decide"* ]]; then
+  ok "unusable REDACTION_PYTHON -> exit 2 with could not decide"
+else
+  bad "unusable REDACTION_PYTHON expected exit 2 with could not decide (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
 fi
 
 # ---------------------------------------------------------------------------

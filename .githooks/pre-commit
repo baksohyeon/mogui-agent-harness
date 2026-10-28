@@ -148,7 +148,7 @@ fi
 #    regardless of what a contributor has installed locally.
 if command -v gitleaks >/dev/null 2>&1 && [[ -z "${SKIP_GITLEAKS:-}" ]]; then
   SCAN_EXIT=0
-  "$REPO_ROOT/scripts/redaction-scan.sh" --staged || SCAN_EXIT=$?
+  REDACTION_PYTHON="$PYTHON3" "$REPO_ROOT/scripts/redaction-scan.sh" --staged || SCAN_EXIT=$?
   if [[ "$SCAN_EXIT" -ne 0 ]]; then
     echo ""
     if [[ "$SCAN_EXIT" -eq 1 ]]; then

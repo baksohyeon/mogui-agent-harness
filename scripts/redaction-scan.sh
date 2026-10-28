@@ -97,8 +97,27 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   echo "redaction-scan: FAIL — gitleaks is not on PATH; install it (brew install gitleaks) or see https://gitleaks.io" >&2
   exit 2
 fi
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "redaction-scan: FAIL — python3 is not on PATH; install Python 3 (e.g. brew install python or apt install python3)" >&2
+# Resolve one interpreter, same rule as .githooks/pre-commit's PYTHON3: honor
+# REDACTION_PYTHON when the hook already resolved it, otherwise fall back to
+# python3 unless it resolves to the Windows Store stub, which pops an
+# installer instead of running.
+PYTHON="${REDACTION_PYTHON:-}"
+if [[ -z "${PYTHON}" ]]; then
+  PYTHON="python3"
+  if command -v python3 >/dev/null 2>&1; then
+    case "$(command -v python3)" in
+      */WindowsApps/python3*) PYTHON="python" ;;
+    esac
+  else
+    PYTHON="python"
+  fi
+fi
+if ! command -v "${PYTHON}" >/dev/null 2>&1; then
+  echo "redaction-scan: FAIL - ${PYTHON} is not on PATH (python3, or REDACTION_PYTHON); install Python 3 (e.g. brew install python or apt install python3)" >&2
+  exit 2
+fi
+if ! "${PYTHON}" -c 'import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
+  echo "redaction-scan: FAIL - could not decide: ${PYTHON} did not run a basic Python 3 check" >&2
   exit 2
 fi
 if [[ ! -f "${BASE_CONFIG}" ]]; then
@@ -129,7 +148,7 @@ if [[ -n "${REDACTION_EXTRA_PATTERNS:-}" ]]; then
     exit 2
   fi
   ORG_CONFIG="${WORK_DIR}/org.toml"
-  if python3 - "${REDACTION_EXTRA_PATTERNS}" "${BASE_CONFIG}" "${ORG_CONFIG}" > "${WORK_DIR}/counts" <<'PY'
+  if "${PYTHON}" - "${REDACTION_EXTRA_PATTERNS}" "${BASE_CONFIG}" "${ORG_CONFIG}" > "${WORK_DIR}/counts" <<'PY'
 import re
 import sys
 
@@ -215,7 +234,7 @@ if [[ "${CONFIG}" != "${BASE_CONFIG}" ]]; then
     # the translator applied and probes each rule alone through gitleaks, so
     # the rules file format lives in one shape and an id indented with a tab cannot
     # slip the net. Ids only, never patterns.
-    bad_ids=$(python3 - "${REDACTION_EXTRA_PATTERNS}" "${WORK_DIR}" <<'PY'
+    bad_ids=$("${PYTHON}" - "${REDACTION_EXTRA_PATTERNS}" "${WORK_DIR}" <<'PY'
 import subprocess
 import sys
 
@@ -374,7 +393,7 @@ scan_materialised_tree() {
   # literal SCAN_TREE string the engine was given and its resolved form so
   # macOS /var vs /private/var (and similar symlink roots) cannot leave a
   # temp-path prefix in place. Any remaining absolute path is undecidable.
-  if ! python3 - "${report_path}" "${SCAN_TREE}" <<'PY'
+  if ! "${PYTHON}" - "${report_path}" "${SCAN_TREE}" <<'PY'
 import json
 import os
 import sys
@@ -470,7 +489,7 @@ scan_commit_messages() {
       exit 2
     fi
     if [[ -s "${REPORTS}/${report_index}.json" ]]; then
-      if ! python3 - "${REPORTS}/${report_index}.json" "commit:${sha:0:12}" <<'PY'
+      if ! "${PYTHON}" - "${REPORTS}/${report_index}.json" "commit:${sha:0:12}" <<'PY'
 import json
 import sys
 
@@ -509,7 +528,7 @@ scan_materialised_tree
 FINDINGS_FILE="${WORK_DIR}/findings.txt"
 # Match text never leaves this process. Public CI logs get file, line, rule, and
 # description only — the gate must not print the value it exists to stop shipping.
-if ! python3 - "${REPORTS}" "${FINDINGS_FILE}" <<'PY'
+if ! "${PYTHON}" - "${REPORTS}" "${FINDINGS_FILE}" <<'PY'
 import json
 import pathlib
 import sys
@@ -562,7 +581,7 @@ SCOPE_FILE="${WORK_DIR}/scope.txt"
 # Always pass the committed base config as well as the active CONFIG: when org
 # rules are loaded, CONFIG is a generated org.toml that only [extend]s the base,
 # so uuid_session path exceptions live in BASE_CONFIG, not in the generated file.
-if ! python3 - "${CONFIG}" "${BASE_CONFIG}" "${COMMIT_MESSAGES_SCANNED}" "${SCOPE_FILE}" <<'PY'
+if ! "${PYTHON}" - "${CONFIG}" "${BASE_CONFIG}" "${COMMIT_MESSAGES_SCANNED}" "${SCOPE_FILE}" <<'PY'
 import re
 import sys
 from pathlib import Path
