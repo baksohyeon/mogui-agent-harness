@@ -139,6 +139,60 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# scanner: REDACTION_PYTHON override is used
+# ---------------------------------------------------------------------------
+echo "-- scanner: REDACTION_PYTHON override is used"
+REPO="${WORKDIR}/python-override"
+make_fixture_repo "${REPO}"
+REAL_PYTHON3="$(command -v python3)"
+PY_LOG="${REPO}/python-shim.log"
+PY_SHIM="${REPO}/python-shim.sh"
+: > "${PY_LOG}"
+cat > "${PY_SHIM}" <<EOF
+#!/usr/bin/env bash
+echo "called" >> "${PY_LOG}"
+exec "${REAL_PYTHON3}" "\$@"
+EOF
+chmod +x "${PY_SHIM}"
+set +e
+OUT="$(
+  cd "${REPO}"
+  REDACTION_PYTHON="${PY_SHIM}" "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh 2>&1
+)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 0 ]] && [[ -s "${PY_LOG}" ]]; then
+  ok "REDACTION_PYTHON shim is invoked and scan passes"
+else
+  bad "REDACTION_PYTHON override expected exit 0 with shim invoked (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
+# scanner: unusable REDACTION_PYTHON exits 2
+# ---------------------------------------------------------------------------
+echo "-- scanner: unusable REDACTION_PYTHON exits 2"
+BAD_PY_SHIM="${REPO}/bad-python-shim.sh"
+cat > "${BAD_PY_SHIM}" <<'EOF'
+#!/usr/bin/env bash
+exit 7
+EOF
+chmod +x "${BAD_PY_SHIM}"
+set +e
+OUT="$(
+  cd "${REPO}"
+  REDACTION_PYTHON="${BAD_PY_SHIM}" "${SCAN_ENV[@]}" bash scripts/redaction-scan.sh 2>&1
+)"
+EC=$?
+set -e
+if [[ "${EC}" -eq 2 ]] && [[ "${OUT}" == *"could not decide"* ]]; then
+  ok "unusable REDACTION_PYTHON -> exit 2 with could not decide"
+else
+  bad "unusable REDACTION_PYTHON expected exit 2 with could not decide (got exit=${EC})"
+  echo "${OUT}" | sed 's/^/    /' >&2
+fi
+
+# ---------------------------------------------------------------------------
 # P1: placeholder word on the same line must not excuse a synthetic credential.
 # ---------------------------------------------------------------------------
 echo "-- P1: placeholder line cannot hide synthetic credential"
